@@ -38,10 +38,10 @@
             <views:DataSourceView/>
         </DataTemplate>
         <DataTemplate DataType="{x:Type vm:ProfileViewModel}">
-            <views:CatalogView/>
+            <views:ProfileView/>
         </DataTemplate>
         <DataTemplate DataType="{x:Type vm:SettingsViewModel}">
-            <views:HistoryView/>
+            <views:SettingsView/>
         </DataTemplate>
     </Window.Resources>
 

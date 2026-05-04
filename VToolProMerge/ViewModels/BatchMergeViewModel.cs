@@ -32,6 +32,8 @@ public class BatchMergeViewModel : ViewModelBase
     private int _filesDone;
     private int _filesTotal = 8;
 
+    private readonly Action<string>? _navigate;
+
     public BatchMergeViewModel(
         IEnumerable<TemplateItem> seedTemplates,
         IEnumerable<MergeIssue> seedIssues,
@@ -40,12 +42,14 @@ public class BatchMergeViewModel : ViewModelBase
         BatchMergeService batchService,
         DataMappingEngine mapping,
         PreviewService preview,
-        DataSourceManager sources)
+        DataSourceManager sources,
+        Action<string>? navigate = null)
     {
         _batch = batchService;
         _mapping = mapping;
         _preview = preview;
         _sources = sources;
+        _navigate = navigate;
         _templateCatalog = seedTemplates.ToList();
 
         Templates = new ObservableCollection<BatchTemplateItem>(
@@ -71,9 +75,14 @@ public class BatchMergeViewModel : ViewModelBase
             var dlg = new Microsoft.Win32.OpenFolderDialog();
             if (dlg.ShowDialog() == true) OutputDir = dlg.FolderName;
         });
-        AdvancedSettingsCommand = new RelayCommand(_ => DialogHelper.Info(
-            "Mở thiết lập nâng cao (template tên file, font, header/footer mặc định, ...).",
-            "Thiết lập nâng cao"));
+        AdvancedSettingsCommand = new RelayCommand(_ =>
+        {
+            // Chuyển sang trang Cài đặt — nơi cấu hình font, header/footer, đường dẫn, ...
+            if (_navigate != null) _navigate("settings");
+            else DialogHelper.Info(
+                "Mở mục 'Cài đặt' bên thanh điều hướng để chỉnh font, đường dẫn, định dạng xuất, ...",
+                "Thiết lập nâng cao");
+        });
 
         GenerateCommand = new RelayCommand(async _ => await RunGenerateAsync());
         DemoCommand = new RelayCommand(async _ => await RunDemoAsync());

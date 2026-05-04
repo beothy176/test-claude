@@ -43,14 +43,14 @@ public class MainViewModel : ViewModelBase
         _templateLib = new TemplateLibraryViewModel(seed.Templates);
         _batchMerge = new BatchMergeViewModel(
             seed.Templates, seed.Issues, seed.OutputFiles, seed.Logs,
-            batch, mapping, preview, sources);
+            batch, mapping, preview, sources, Navigate);
         _designer = new DesignerViewModel(seed.DataSourceTree, seed.Elements,
             preview, tables, conditional, sources);
         _placeholderMgr = new PlaceholderManagerViewModel(seed.Placeholders);
         _catalog = new CatalogViewModel();
         _history = new HistoryViewModel(seed.Logs);
         _dataSource = new DataSourceViewModel(sources);
-        _profile = new ProfileViewModel();
+        _profile = new ProfileViewModel(Navigate);
         _settings = new SettingsViewModel();
 
         Profiles = new ObservableCollection<string>
@@ -88,9 +88,14 @@ public class MainViewModel : ViewModelBase
         PreviewCommand = new RelayCommand(_ => DialogHelper.Info(
             "Mở Designer cho mẫu được chọn để xem preview, hoặc dùng nút Demo trong Trộn bộ hồ sơ.",
             "Xem thử"));
-        CheckErrorsCommand = new RelayCommand(_ => DialogHelper.Info(
-            "Engine ErrorChecker sẽ chạy: thiếu placeholder / dữ liệu chưa map / bảng động thiếu cột / file thiếu.",
-            "Kiểm tra lỗi"));
+        CheckErrorsCommand = new RelayCommand(_ =>
+        {
+            // Mở thẳng màn 'Trộn bộ hồ sơ' — nơi engine ErrorChecker hiển thị
+            // danh sách cảnh báo (thiếu placeholder, dữ liệu chưa map, bảng động thiếu cột, file thiếu).
+            Navigate("batch");
+            StatusText = $"Đã chuyển sang Trộn bộ hồ sơ — xem khung 'Cảnh báo' bên phải " +
+                         $"({_batchMerge.ErrorCount} lỗi, {_batchMerge.WarningCount} cảnh báo).";
+        });
         GenerateCommand = new RelayCommand(_ =>
         {
             Navigate("batch");
