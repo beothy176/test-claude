@@ -44,7 +44,7 @@
             <Border Style="{StaticResource Card}" Margin="4,0">
                 <StackPanel Orientation="Horizontal">
                     <Border Style="{StaticResource StatIconBox}" Background="{StaticResource SuccessSoftBrush}">
-                        <TextBlock Text="{ }" FontSize="18" HorizontalAlignment="Center" VerticalAlignment="Center"
+                        <TextBlock Text="{}{ }" FontSize="18" HorizontalAlignment="Center" VerticalAlignment="Center"
                                    Foreground="{StaticResource SuccessBrush}" FontWeight="Bold"/>
                     </Border>
                     <StackPanel Margin="14,0,0,0" VerticalAlignment="Center">
@@ -288,7 +288,7 @@
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
                             <TextBox Text="{Binding FileNamePattern}"/>
-                            <Button Grid.Column="1" Content="{ }" Style="{StaticResource BtnGhost}"
+                            <Button Grid.Column="1" Content="{}{ }" Style="{StaticResource BtnGhost}"
                                     Margin="6,0,0,0" Width="40"/>
                         </Grid>
 
