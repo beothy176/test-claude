@@ -253,9 +253,9 @@
                             CornerRadius="8" Padding="10" Margin="0,8,0,0">
                         <TextBlock Foreground="{StaticResource SuccessBrush}" FontWeight="SemiBold">
                             <Run Text="Tổng kết: "/>
-                            <Run Text="{Binding ErrorCount}"/>
+                            <Run Text="{Binding ErrorCount, Mode=OneWay}"/>
                             <Run Text=" lỗi, "/>
-                            <Run Text="{Binding WarningCount}"/>
+                            <Run Text="{Binding WarningCount, Mode=OneWay}"/>
                             <Run Text=" cảnh báo"/>
                         </TextBlock>
                     </Border>
@@ -477,7 +477,7 @@
                     <StackPanel Orientation="Horizontal" Margin="20,0,0,0" VerticalAlignment="Center">
                         <TextBlock Text="{Binding ProgressText}" FontWeight="SemiBold" Margin="0,0,8,0"/>
                         <ProgressBar Width="180" Height="8" Minimum="0" Maximum="100"
-                                     Value="{Binding ProgressPercent}"
+                                     Value="{Binding ProgressPercent, Mode=OneWay}"
                                      Background="{StaticResource BgChipBrush}"
                                      Foreground="{StaticResource BrandPrimaryBrush}"
                                      BorderThickness="0"/>
