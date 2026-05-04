@@ -1,51 +1,109 @@
+using System;
 using System.Collections.Generic;
 using System.IO;
 using DocumentFormat.OpenXml.Packaging;
-using DocumentFormat.OpenXml.Wordprocessing;
+using VToolProMerge.Helpers;
 
 namespace VToolProMerge.Services;
 
 /// <summary>
-/// Engine trộn Word. Bản khung dùng OpenXML để thay thế placeholder dạng [TEN_TRUONG].
-/// Khi cần xuất PDF / preview thật, có thể chuyển sang Microsoft Office Interop.
+/// Engine trộn Word thật. Thay placeholder dạng [TEN_TRUONG] an toàn cho trường hợp
+/// Word tách 1 chuỗi thành nhiều Run (split-runs). Áp dụng cho body, header, footer,
+/// footnote, endnote. Xuất PDF qua Microsoft Word Interop (late-bound COM, không bắt
+/// buộc cài Office trên máy build).
 /// </summary>
 public class WordMergeEngine
 {
+    /// <summary>
+    /// Tạo file output bằng cách copy template, chạy điều kiện, thay placeholder.
+    /// Bảng động được xử lý ở DynamicTableMerger (gọi sau khi ReplacePlaceholders).
+    /// </summary>
     public void MergeSingleDocument(string sourceTemplate, string outputPath,
-        IReadOnlyDictionary<string, string?> values)
+        IReadOnlyDictionary<string, string?> values,
+        ConditionalBlockProcessor? conditional = null,
+        DynamicTableMerger? tableMerger = null,
+        IReadOnlyDictionary<string, System.Data.DataTable>? tableSources = null)
     {
+        if (!File.Exists(sourceTemplate))
+            throw new FileNotFoundException("Không tìm thấy file mẫu", sourceTemplate);
+
+        var dir = Path.GetDirectoryName(outputPath);
+        if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
         File.Copy(sourceTemplate, outputPath, overwrite: true);
+
+        // Thứ tự xử lý:
+        //  1) Bảng động (clone row trước khi thay placeholder để placeholder trong bảng
+        //     được nhân bản đúng theo từng dòng dữ liệu).
+        //  2) Khối điều kiện (xóa block khi điều kiện sai).
+        //  3) Thay placeholder.
+        if (tableMerger != null && tableSources != null && tableSources.Count > 0)
+            tableMerger.MergeTables(outputPath, tableSources);
+
+        if (conditional != null)
+            conditional.ApplyConditionalBlocks(outputPath, values);
+
         ReplacePlaceholders(outputPath, values);
     }
 
     public void ReplacePlaceholders(string filePath, IReadOnlyDictionary<string, string?> values)
     {
-        // TODO: Word thường tách 1 placeholder thành nhiều Run (split runs).
-        // Bản production cần gộp run theo paragraph trước khi replace.
         using var doc = WordprocessingDocument.Open(filePath, true);
-        var body = doc.MainDocumentPart?.Document?.Body;
-        if (body == null) return;
 
-        foreach (var t in body.Descendants<Text>())
+        foreach (var part in OpenXmlHelpers.AllStoryParts(doc))
         {
-            foreach (var kv in values)
-            {
-                if (string.IsNullOrEmpty(t.Text)) continue;
-                if (t.Text.Contains(kv.Key))
-                    t.Text = t.Text.Replace(kv.Key, kv.Value ?? string.Empty);
-            }
+            var root = OpenXmlHelpers.GetRoot(part);
+            if (root == null) continue;
+            OpenXmlHelpers.ReplacePlaceholdersInElement(root, values);
         }
+
         doc.MainDocumentPart!.Document.Save();
     }
 
     /// <summary>
-    /// Xuất PDF. Bản hiện tại chỉ là khung — sẽ nối với Microsoft Word Interop:
-    ///   wordApp.Documents.Open(...).ExportAsFixedFormat(pdfPath, WdExportFormat.wdExportFormatPDF);
+    /// Xuất DOCX sang PDF qua Microsoft Word Interop (COM trễ — không cần reference Interop).
+    /// Yêu cầu Microsoft Word đã cài trên máy chạy.
     /// </summary>
     public void ExportToPdf(string docxPath, string pdfPath)
     {
-        // TODO: Implement bằng Microsoft.Office.Interop.Word.
-        throw new System.NotImplementedException(
-            "Cần Microsoft Word cài trên máy + tham chiếu Office Interop để xuất PDF thật.");
+        var wordType = Type.GetTypeFromProgID("Word.Application")
+            ?? throw new InvalidOperationException(
+                "Microsoft Word chưa cài trên máy này — không thể xuất PDF.");
+
+        dynamic word = Activator.CreateInstance(wordType)!;
+        try
+        {
+            word.Visible = false;
+            word.DisplayAlerts = 0; // wdAlertsNone
+            dynamic doc = word.Documents.Open(
+                FileName: Path.GetFullPath(docxPath),
+                ConfirmConversions: false,
+                ReadOnly: true,
+                AddToRecentFiles: false);
+            try
+            {
+                // wdExportFormatPDF = 17
+                doc.ExportAsFixedFormat(
+                    OutputFileName: Path.GetFullPath(pdfPath),
+                    ExportFormat: 17,
+                    OpenAfterExport: false,
+                    OptimizeFor: 0,           // wdExportOptimizeForPrint
+                    Range: 0,                  // wdExportAllDocument
+                    Item: 7,                   // wdExportDocumentWithMarkup
+                    IncludeDocProps: true,
+                    KeepIRM: true,
+                    CreateBookmarks: 0,
+                    DocStructureTags: true,
+                    BitmapMissingFonts: true,
+                    UseISO19005_1: false);
+            }
+            finally
+            {
+                doc.Close(SaveChanges: 0); // wdDoNotSaveChanges
+            }
+        }
+        finally
+        {
+            word.Quit(SaveChanges: 0);
+        }
     }
 }

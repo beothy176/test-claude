@@ -1,19 +1,33 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using VToolProMerge.Helpers;
 using VToolProMerge.Models;
 
 namespace VToolProMerge.Services;
 
+/// <summary>
+/// Sinh hàng loạt văn bản trong 1 bộ hồ sơ. Gọi đầy đủ:
+///   ConditionalBlockProcessor -> DynamicTableMerger -> WordMergeEngine.ReplacePlaceholders
+///   -> ExportToPdf (nếu cần).
+/// </summary>
 public class BatchMergeService
 {
     private readonly WordMergeEngine _word;
+    private readonly DynamicTableMerger _tables;
+    private readonly ConditionalBlockProcessor _conditional;
     private readonly AuditLogService _audit;
 
-    public BatchMergeService(WordMergeEngine word, AuditLogService audit)
+    public BatchMergeService(
+        WordMergeEngine word,
+        DynamicTableMerger tables,
+        ConditionalBlockProcessor conditional,
+        AuditLogService audit)
     {
         _word = word;
+        _tables = tables;
+        _conditional = conditional;
         _audit = audit;
     }
 
@@ -22,62 +36,101 @@ public class BatchMergeService
         var errors = new List<string>();
         foreach (var t in templates)
         {
-            if (!File.Exists(t.FilePath))
+            if (string.IsNullOrEmpty(t.FilePath) || !File.Exists(t.FilePath))
                 errors.Add($"Thiếu file mẫu: {t.Name}");
         }
         return errors;
     }
 
-    public IReadOnlyList<string> GenerateDocuments(
-        IEnumerable<TemplateItem> templates,
-        IReadOnlyDictionary<string, string?> values,
-        string outputDir,
-        string fileNamePattern,
-        string format)
+    public class GenerateResult
     {
-        Directory.CreateDirectory(outputDir);
-        var outputs = new List<string>();
-        foreach (var t in templates)
-        {
-            var nameValues = new Dictionary<string, string?>(values, StringComparer.Ordinal)
-            {
-                ["TEN_MAU"] = t.Name
-            };
-            var fileName = FileNameHelper.Resolve(fileNamePattern, nameValues) + ".docx";
-            var fullPath = Path.Combine(outputDir, fileName);
-            _word.MergeSingleDocument(t.FilePath, fullPath, values);
-            outputs.Add(fullPath);
-
-            if (format == "PDF" || format == "DOCX+PDF")
-            {
-                var pdf = Path.ChangeExtension(fullPath, ".pdf");
-                try { _word.ExportToPdf(fullPath, pdf); outputs.Add(pdf); }
-                catch (NotImplementedException) { /* sẽ nối sau */ }
-            }
-
-            _audit.WriteLog(new AuditLogItem
-            {
-                Action = $"Sinh hồ sơ: {t.Name}",
-                Status = "Hoàn tất",
-                Profile = outputDir
-            });
-        }
-        return outputs;
+        public List<string> OutputFiles { get; } = new();
+        public List<string> Errors { get; } = new();
+        public List<string> Warnings { get; } = new();
+        public int FilesDone { get; set; }
+        public int FilesTotal { get; set; }
     }
 
-    public IReadOnlyList<string> ExportDocuments(IEnumerable<string> docxPaths, string format)
+    public GenerateResult GenerateDocuments(
+        IEnumerable<TemplateItem> templates,
+        MergeContext context,
+        string outputDir,
+        string fileNamePattern,
+        string format,
+        Action<int, int>? onProgress = null)
     {
-        var result = new List<string>();
-        foreach (var p in docxPaths)
+        var result = new GenerateResult();
+        var list = templates.ToList();
+        result.FilesTotal = list.Count;
+        Directory.CreateDirectory(outputDir);
+
+        for (int i = 0; i < list.Count; i++)
         {
-            result.Add(p);
-            if (format == "PDF" || format == "DOCX+PDF")
+            var t = list[i];
+            try
             {
-                var pdf = Path.ChangeExtension(p, ".pdf");
-                try { _word.ExportToPdf(p, pdf); result.Add(pdf); }
-                catch (NotImplementedException) { }
+                if (string.IsNullOrEmpty(t.FilePath) || !File.Exists(t.FilePath))
+                {
+                    result.Errors.Add($"Bỏ qua {t.Name}: file mẫu không tồn tại.");
+                    continue;
+                }
+
+                var fileNameValues = new Dictionary<string, string?>(StringComparer.Ordinal);
+                foreach (var kv in context.Tokens)
+                    fileNameValues[kv.Key.Trim('[', ']')] = kv.Value;
+                fileNameValues["TEN_MAU"] = t.Name;
+
+                var docxName = FileNameHelper.Resolve(fileNamePattern, fileNameValues) + ".docx";
+                var docxPath = Path.Combine(outputDir, docxName);
+
+                _word.MergeSingleDocument(
+                    sourceTemplate: t.FilePath,
+                    outputPath: docxPath,
+                    values: context.Tokens,
+                    conditional: _conditional,
+                    tableMerger: _tables,
+                    tableSources: context.TableSources);
+
+                if (format != "PDF") result.OutputFiles.Add(docxPath);
+
+                if (format == "PDF" || format == "DOCX+PDF")
+                {
+                    var pdfPath = Path.ChangeExtension(docxPath, ".pdf");
+                    try
+                    {
+                        _word.ExportToPdf(docxPath, pdfPath);
+                        result.OutputFiles.Add(pdfPath);
+                        if (format == "PDF" && File.Exists(docxPath)) File.Delete(docxPath);
+                    }
+                    catch (Exception ex)
+                    {
+                        result.Warnings.Add($"Không xuất được PDF cho {t.Name}: {ex.Message}");
+                    }
+                }
+
+                _audit.WriteLog(new AuditLogItem
+                {
+                    Action = $"Sinh hồ sơ: {t.Name}",
+                    Status = "Hoàn tất",
+                    Profile = outputDir
+                });
+
+                result.FilesDone++;
+                onProgress?.Invoke(result.FilesDone, result.FilesTotal);
+            }
+            catch (Exception ex)
+            {
+                result.Errors.Add($"Lỗi với {t.Name}: {ex.Message}");
+                _audit.WriteLog(new AuditLogItem
+                {
+                    Action = $"Sinh hồ sơ: {t.Name}",
+                    Status = "Lỗi",
+                    Profile = outputDir,
+                    Detail = ex.Message
+                });
             }
         }
+
         return result;
     }
 

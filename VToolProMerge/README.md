@@ -1,14 +1,37 @@
-# VToolPro Merge — Phần 1 (UI khung chạy được)
+# VToolPro Merge — Phần 1 + Phần 2 (UI + Engine thật)
 
 Phần mềm trộn thư / sinh hồ sơ chuyên nghiệp, chạy local/offline trên Windows.
-Phần 1 này tạo project WPF .NET 8 chạy được với MainWindow + Sidebar + Topbar +
-Statusbar và 3 màn hình chính theo đúng tinh thần 3 ảnh giao diện đính kèm:
 
-1. **Thư viện mẫu** — hiển thị card mẫu, filter theo nhóm, panel "Thông tin mẫu" + "Tóm tắt placeholder".
-2. **Trộn bộ hồ sơ** — 5 thẻ thống kê + 4 cột (Chọn mẫu / Dữ liệu & kiểm tra / Kết quả đầu ra / Xem trước & lịch sử) + tiến trình 4 bước + nút "Sinh bộ hồ sơ".
-3. **Thiết kế mẫu (Designer)** — breadcrumb, toolbar, format bar, trang Word A4 mô phỏng có placeholder `[TEN_TRUONG]`, tab strip dọc + 4 panel (Nguồn dữ liệu / Cây phần tử / Quick Builder / Thuộc tính).
+## Part 1 — UI khung
+MainWindow + Sidebar + Topbar + Statusbar và 3 màn hình chính theo bố cục 3 ảnh:
 
-> Phần 2 sẽ nối engine thật với Word/Excel (OpenXML + Microsoft Office Interop).
+1. **Thư viện mẫu** — card mẫu, filter, panel "Thông tin mẫu" + "Tóm tắt placeholder".
+2. **Trộn bộ hồ sơ** — 5 thẻ thống kê + 4 cột + tiến trình 4 bước + nút "Sinh bộ hồ sơ" / "Demo".
+3. **Thiết kế mẫu (Designer)** — breadcrumb, toolbar, format bar, trang Word A4 mô phỏng + 4 panel phải.
+
+## Part 2 — Engine thật (đã hoàn thành)
+
+| Module                       | Trạng thái | Chi tiết                                                                             |
+|------------------------------|------------|--------------------------------------------------------------------------------------|
+| `WordMergeEngine`            | ✅          | Replace placeholder split-run-safe, áp dụng cho body/header/footer/footnote/endnote.|
+| `ConditionalBlockProcessor`  | ✅          | `[IF:FIELD]…[ENDIF:FIELD]`, `[IF:FIELD=VALUE]`, `[IF:FIELD!=VALUE]`, hỗ trợ lồng.   |
+| `DynamicTableMerger`         | ✅          | Tự nhận diện template row qua `[PREFIX_*]`, clone/insert per data row, format VND.  |
+| `JsonDataSource`             | ✅          | Đọc `Scalars` + `Tables`.                                                            |
+| `ExcelDataSource`            | ✅          | Sheet `Scalars` (key/value) + các sheet còn lại = bảng dữ liệu.                     |
+| `SqliteDataSource`           | ✅          | `SELECT Key,Value FROM Scalars` + `SELECT * FROM <table>`.                           |
+| `DataMappingEngine`          | ✅          | Gộp nhiều IDataSource → `MergeContext` (token + table sources).                      |
+| `BatchMergeService`          | ✅          | End-to-end: condition → table → placeholder → PDF.                                   |
+| `PreviewService`             | ✅          | Mở Word qua COM late-bound (fallback shell nếu Word chưa cài).                       |
+| `WordMergeEngine.ExportToPdf`| ✅          | Word Interop late-bound (`ExportAsFixedFormat` → PDF).                              |
+| `SampleTemplateBuilder`      | ✅          | Tự dựng 1 mẫu hợp đồng `.docx` để chạy demo end-to-end không cần Word.              |
+| `ErrorCheckerService`        | ✅          | Thiếu placeholder / dữ liệu chưa map / sheet thiếu / cột bảng động thiếu / file thiếu.|
+
+### Quy ước placeholder Part 2
+
+- Scalar: `[TEN_TRUONG]` — thay theo `MergeContext.Tokens`.
+- Bảng động: dòng template chứa `[PREFIX_FIELD]` ví dụ `[HH_STT]`, `[HH_TEN]`, `[HH_TT]`. Engine tự tìm dòng template, clone theo từng row trong `MergeContext.TableSources["HH"]`, sau đó xóa dòng template gốc.
+- Khối điều kiện: paragraph chứa duy nhất `[IF:FIELD]` mở đầu, paragraph khác chứa `[ENDIF:FIELD]` đóng. Hỗ trợ `[IF:FIELD=VALUE]` và lồng nhau.
+- Dòng tổng cộng (`[TONG_TIEN]`) là placeholder thường, để ngoài bảng động.
 
 ---
 
@@ -94,9 +117,20 @@ var found = new TemplateScanner().ScanTextPlaceholders(@"
 
 ## 8. Sinh thử bộ hồ sơ
 
-Tại màn **Trộn bộ hồ sơ**, nhấn nút lớn "Sinh bộ hồ sơ".
-Phiên bản hiện tại chạy giả lập tiến trình 4 bước để bạn thấy luồng.
-Phần 2 sẽ nối với `BatchMergeService.GenerateDocuments(...)` thực tế.
+### 8.1. Demo end-to-end không cần Word
+Trong màn **Trộn bộ hồ sơ**, nhấn nút **"Demo: Tạo mẫu + sinh thử"**:
+1. `SampleTemplateBuilder` tạo file `HopDongMuaBan_Template.docx` trong `%TEMP%\VToolPro_Demo\`.
+2. `BatchMergeService` chạy:
+   - `DynamicTableMerger.MergeTables` — clone 3 dòng hàng hóa (M001/M002/M003).
+   - `ConditionalBlockProcessor.ApplyConditionalBlocks` — vì `[HAS_VAT]=true` nên giữ Điều 2.
+   - `WordMergeEngine.ReplacePlaceholders` — thay toàn bộ placeholder scalar (an toàn cho run bị tách).
+3. Mở thư mục `%TEMP%\VToolPro_Demo\` để xem file `HS001_GoiThau01_HopDongMuaBan_Demo.docx`.
+
+### 8.2. Sinh thực tế từ mẫu của bạn
+Đặt `FilePath` cho từng `TemplateItem` trong `JsonTemplateRepository`/SQLite, sau đó nhấn **"Sinh bộ hồ sơ"** ở topbar hoặc trong màn Trộn bộ hồ sơ. Engine sẽ chạy đúng pipeline trên đối với mỗi mẫu được tích chọn.
+
+### 8.3. Xuất PDF
+Khi chọn `PDF` hoặc `DOCX + PDF`, `WordMergeEngine.ExportToPdf` gọi Microsoft Word qua COM late-bound (`Type.GetTypeFromProgID("Word.Application")`). Yêu cầu: Microsoft Word đã cài. Nếu Word không có, file DOCX vẫn được tạo và một cảnh báo được ghi log.
 
 ## 9. Lộ trình các phần tiếp theo
 

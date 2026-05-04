@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using ClosedXML.Excel;
 using VToolProMerge.Models;
 
 namespace VToolProMerge.Services;
@@ -8,32 +9,30 @@ namespace VToolProMerge.Services;
 public class ErrorCheckerService
 {
     public IEnumerable<string> CheckMissingPlaceholders(
-        IEnumerable<string> placeholdersInTemplate,
-        IEnumerable<MappingRule> rules)
+        IEnumerable<string> placeholdersInTemplate, MergeContext ctx)
     {
-        var mapped = rules.Select(r => r.Placeholder.Trim('[', ']')).ToHashSet();
-        return placeholdersInTemplate.Where(p => !mapped.Contains(p));
+        return placeholdersInTemplate.Where(p =>
+        {
+            var key = $"[{p}]";
+            return !ctx.Tokens.TryGetValue(key, out var v) || string.IsNullOrEmpty(v);
+        });
     }
 
     public IEnumerable<string> CheckUnusedData(
-        IEnumerable<string> placeholdersInTemplate,
-        IEnumerable<MappingRule> rules)
+        IEnumerable<string> placeholdersInTemplate, MergeContext ctx)
     {
         var inTemplate = placeholdersInTemplate.ToHashSet();
-        return rules.Select(r => r.Placeholder.Trim('[', ']'))
-                    .Where(p => !inTemplate.Contains(p));
+        return ctx.Tokens.Keys
+            .Select(k => k.Trim('[', ']'))
+            .Where(p => !inTemplate.Contains(p));
     }
 
     public IEnumerable<string> CheckMissingExcelSheet(string excelPath, IEnumerable<string> sheets)
     {
-        var missing = new List<string>();
-        if (!File.Exists(excelPath))
-        {
-            foreach (var s in sheets) missing.Add(s);
-            return missing;
-        }
-        // TODO: dùng ClosedXML mở workbook và so sánh tên sheet.
-        return missing;
+        if (!File.Exists(excelPath)) return sheets;
+        using var wb = new XLWorkbook(excelPath);
+        var actual = wb.Worksheets.Select(w => w.Name).ToHashSet();
+        return sheets.Where(s => !actual.Contains(s));
     }
 
     public IEnumerable<string> CheckDynamicTableColumns(IEnumerable<string> required, IEnumerable<string> have)

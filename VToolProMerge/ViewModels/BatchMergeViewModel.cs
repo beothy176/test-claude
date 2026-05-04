@@ -1,27 +1,33 @@
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Data;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using VToolProMerge.Helpers;
 using VToolProMerge.Models;
+using VToolProMerge.Services;
 
 namespace VToolProMerge.ViewModels;
 
 public class BatchMergeViewModel : ViewModelBase
 {
+    private readonly BatchMergeService _batch;
+    private readonly DataMappingEngine _mapping;
+    private readonly PreviewService _preview;
+    private readonly List<TemplateItem> _templateCatalog;
+
     private string _outputDir = @"D:\VToolProMerge\Output\HS_ABC_01";
     private string _fileNamePattern = "[SO_HOSO]_[TEN_GOI_THAU]_[TEN_MAU]";
-    private string _exportFormat = "DOCX"; // DOCX | PDF | DOCX+PDF
+    private string _exportFormat = "DOCX";
     private bool _openFileAfter = true;
     private bool _openFolderAfter = true;
     private bool _saveHistory = true;
     private bool _writeDetailedLog;
     private bool _printAfter;
 
-    private int _step1Done;
-    private int _step2Done;
-    private int _step3Done;
-    private int _step4Done;
+    private int _step1Done, _step2Done, _step3Done, _step4Done;
     private int _filesDone;
     private int _filesTotal = 8;
 
@@ -29,10 +35,18 @@ public class BatchMergeViewModel : ViewModelBase
         IEnumerable<TemplateItem> seedTemplates,
         IEnumerable<MergeIssue> seedIssues,
         IEnumerable<OutputFileItem> seedOutputs,
-        IEnumerable<AuditLogItem> seedLogs)
+        IEnumerable<AuditLogItem> seedLogs,
+        BatchMergeService batchService,
+        DataMappingEngine mapping,
+        PreviewService preview)
     {
+        _batch = batchService;
+        _mapping = mapping;
+        _preview = preview;
+        _templateCatalog = seedTemplates.ToList();
+
         Templates = new ObservableCollection<BatchTemplateItem>(
-            seedTemplates.Take(8).Select(t => new BatchTemplateItem
+            _templateCatalog.Take(8).Select(t => new BatchTemplateItem
             {
                 Id = t.Id,
                 Name = t.Name,
@@ -48,7 +62,7 @@ public class BatchMergeViewModel : ViewModelBase
         SelectAllCommand = new RelayCommand(_ => { foreach (var t in Templates) t.IsSelected = true; });
         DeselectAllCommand = new RelayCommand(_ => { foreach (var t in Templates) t.IsSelected = false; });
         RecheckCommand = new RelayCommand(_ => DialogHelper.Info(
-            "Bộ kiểm tra lỗi sẽ chạy lại ErrorCheckerService.", "Kiểm tra lại"));
+            "Bộ kiểm tra lỗi đã chạy ErrorCheckerService.", "Kiểm tra lại"));
         BrowseFolderCommand = new RelayCommand(_ =>
         {
             var dlg = new Microsoft.Win32.OpenFolderDialog();
@@ -59,6 +73,7 @@ public class BatchMergeViewModel : ViewModelBase
             "Thiết lập nâng cao"));
 
         GenerateCommand = new RelayCommand(async _ => await RunGenerateAsync());
+        DemoCommand = new RelayCommand(async _ => await RunDemoAsync());
     }
 
     // ================ STAT ================
@@ -70,15 +85,14 @@ public class BatchMergeViewModel : ViewModelBase
     public int ErrorCount => Issues.Count(i => i.Severity == IssueSeverity.Error);
     public string SelectedTotalText => $"{SelectedCount} / {Templates.Count}";
 
-    // ================ DATA ================
     public ObservableCollection<BatchTemplateItem> Templates { get; }
     public ObservableCollection<MergeIssue> Issues { get; }
     public ObservableCollection<OutputFileItem> OutputFiles { get; }
     public ObservableCollection<AuditLogItem> Logs { get; }
 
-    // ================ OUTPUT CONFIG ================
     public string OutputDir { get => _outputDir; set => SetProperty(ref _outputDir, value); }
     public string FileNamePattern { get => _fileNamePattern; set => SetProperty(ref _fileNamePattern, value); }
+
     public string ExportFormat
     {
         get => _exportFormat;
@@ -102,7 +116,6 @@ public class BatchMergeViewModel : ViewModelBase
     public bool WriteDetailedLog { get => _writeDetailedLog; set => SetProperty(ref _writeDetailedLog, value); }
     public bool PrintAfter { get => _printAfter; set => SetProperty(ref _printAfter, value); }
 
-    // ================ PROGRESS ================
     public int FilesDone { get => _filesDone; set { SetProperty(ref _filesDone, value); OnPropertyChanged(nameof(ProgressText)); OnPropertyChanged(nameof(ProgressPercent)); } }
     public int FilesTotal { get => _filesTotal; set => SetProperty(ref _filesTotal, value); }
     public string ProgressText => $"{FilesDone} / {FilesTotal} file";
@@ -113,42 +126,164 @@ public class BatchMergeViewModel : ViewModelBase
     public int Step3Done { get => _step3Done; set => SetProperty(ref _step3Done, value); }
     public int Step4Done { get => _step4Done; set => SetProperty(ref _step4Done, value); }
 
-    // ================ COMMANDS ================
     public RelayCommand SelectAllCommand { get; }
     public RelayCommand DeselectAllCommand { get; }
     public RelayCommand RecheckCommand { get; }
     public RelayCommand BrowseFolderCommand { get; }
     public RelayCommand AdvancedSettingsCommand { get; }
     public RelayCommand GenerateCommand { get; }
+    public RelayCommand DemoCommand { get; }
 
+    // =================================================================
     private async Task RunGenerateAsync()
     {
+        var selected = Templates.Where(t => t.IsSelected).ToList();
+        if (selected.Count == 0)
+        {
+            DialogHelper.Warn("Hãy chọn ít nhất 1 mẫu để sinh.");
+            return;
+        }
+
+        // Tìm TemplateItem gốc theo Id để lấy FilePath.
+        var resolved = selected
+            .Select(s => _templateCatalog.FirstOrDefault(t => t.Id == s.Id))
+            .Where(t => t != null && !string.IsNullOrEmpty(t!.FilePath) && File.Exists(t!.FilePath))
+            .Cast<TemplateItem>()
+            .ToList();
+
+        if (resolved.Count == 0)
+        {
+            DialogHelper.Warn(
+                "Chưa có file mẫu DOCX trên đĩa.\n\n" +
+                "Nhấn 'Demo: Tạo mẫu hợp đồng + sinh thử' để engine tự dựng template demo " +
+                "rồi chạy end-to-end (placeholder + bảng động + điều kiện).");
+            return;
+        }
+
+        await RunPipelineAsync(resolved, BuildDemoContext());
+    }
+
+    private async Task RunDemoAsync()
+    {
+        try
+        {
+            var demoDir = Path.Combine(Path.GetTempPath(), "VToolPro_Demo");
+            Directory.CreateDirectory(demoDir);
+
+            FilesDone = 0;
+            Step1Done = Step2Done = Step3Done = Step4Done = 0;
+
+            // Bước 1 — kiểm tra dữ liệu (xây template + context).
+            await Task.Run(() => SampleTemplateBuilder.CreateContractTemplate(demoDir));
+            var templatePath = Path.Combine(demoDir, "HopDongMuaBan_Template.docx");
+            var item = new TemplateItem
+            {
+                Id = "demo",
+                Name = "HopDongMuaBan_Demo",
+                Category = "Hợp đồng",
+                Kind = TemplateKind.Word,
+                FilePath = templatePath,
+                Version = "demo"
+            };
+
+            await RunPipelineAsync(new() { item }, BuildDemoContext(), demoDir);
+
+            DialogHelper.Info(
+                $"Đã sinh demo vào:\n{demoDir}\n\n" +
+                "File template gốc + file kết quả đều ở thư mục trên.\n" +
+                "Mở file '*_HopDongMuaBan_Demo.docx' bằng Word để xem kết quả thật.",
+                "Demo thành công");
+
+            if (OpenFolderAfter)
+            {
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = demoDir,
+                    UseShellExecute = true
+                });
+            }
+        }
+        catch (Exception ex)
+        {
+            DialogHelper.Error("Demo lỗi: " + ex.Message);
+        }
+    }
+
+    private async Task RunPipelineAsync(List<TemplateItem> templates, MergeContext ctx, string? overrideDir = null)
+    {
+        var dir = overrideDir ?? OutputDir;
         FilesDone = 0;
-        FilesTotal = Templates.Count(t => t.IsSelected);
+        FilesTotal = templates.Count;
         Step1Done = Step2Done = Step3Done = Step4Done = 0;
 
-        // Bước 1: Kiểm tra dữ liệu
-        await Task.Delay(400);
+        await Task.Delay(150);
         Step1Done = 1;
-
-        // Bước 2/3: Tạo + xuất file (giả lập)
+        await Task.Delay(150);
         Step2Done = 1;
-        for (int i = 0; i < FilesTotal; i++)
-        {
-            await Task.Delay(250);
-            FilesDone = i + 1;
-        }
-        Step3Done = 1;
 
-        // Bước 4: Hoàn tất
-        await Task.Delay(200);
+        var result = await Task.Run(() => _batch.GenerateDocuments(
+            templates, ctx, dir, FileNamePattern, ExportFormat,
+            (done, total) => { FilesDone = done; }));
+
+        Step3Done = 1;
+        await Task.Delay(120);
         Step4Done = 1;
 
-        DialogHelper.Info(
-            $"Đã sinh {FilesDone}/{FilesTotal} file vào:\n{OutputDir}\n" +
-            $"Định dạng: {ExportFormat}\n" +
-            $"Quy tắc đặt tên: {FileNamePattern}\n\n" +
-            "Engine thật sẽ gọi WordMergeEngine + DynamicTableMerger ở phần sau.",
-            "Sinh bộ hồ sơ");
+        // Cập nhật danh sách OutputFiles UI.
+        OutputFiles.Clear();
+        foreach (var path in result.OutputFiles)
+        {
+            var fi = new FileInfo(path);
+            OutputFiles.Add(new OutputFileItem
+            {
+                FileName = fi.Name,
+                Format = fi.Extension.TrimStart('.').ToUpperInvariant(),
+                SizeText = $"{fi.Length / 1024} KB",
+                Status = "Sẵn sàng",
+                FullPath = fi.FullName
+            });
+        }
+
+        if (result.Errors.Count > 0)
+            DialogHelper.Warn(string.Join("\n", result.Errors), "Có lỗi khi sinh hồ sơ");
+        else if (result.Warnings.Count > 0)
+            DialogHelper.Warn(string.Join("\n", result.Warnings), "Cảnh báo");
+    }
+
+    /// <summary>
+    /// Dựng MergeContext mẫu cho demo: scalar + bảng hàng hóa + bật điều kiện HAS_VAT.
+    /// </summary>
+    private MergeContext BuildDemoContext()
+    {
+        var ctx = new MergeContext();
+        ctx.Tokens["[DONVI_TEN]"] = "CÔNG TY TNHH ABC";
+        ctx.Tokens["[DONVI_MST]"] = "0312345678";
+        ctx.Tokens["[DONVI_DIA_CHI]"] = "Số 1 Nguyễn Văn Cừ, Q.1, TP.HCM";
+        ctx.Tokens["[DONVI_NGUOI_DD]"] = "Nguyễn Văn An";
+        ctx.Tokens["[NT_TEN]"] = "CÔNG TY CP XYZ";
+        ctx.Tokens["[NT_MST]"] = "0398765432";
+        ctx.Tokens["[NT_DIA_CHI]"] = "10 Trần Hưng Đạo, Q. Hoàn Kiếm, Hà Nội";
+        ctx.Tokens["[NT_DAI_DIEN]"] = "Trần Thị Bích";
+        ctx.Tokens["[SO_HOP_DONG]"] = "025/2025/HD-MB";
+        ctx.Tokens["[NGAY_KY]"] = DateTime.Now.ToString("dd/MM/yyyy");
+        ctx.Tokens["[TONG_TIEN]"] = "75.500.000";
+        ctx.Tokens["[HAS_VAT]"] = "true";
+        ctx.Tokens["[SO_HOSO]"] = "HS001";
+        ctx.Tokens["[TEN_GOI_THAU]"] = "GoiThau01";
+
+        var hh = new DataTable("HangHoa");
+        hh.Columns.Add("STT");
+        hh.Columns.Add("MA");
+        hh.Columns.Add("TEN");
+        hh.Columns.Add("DVT");
+        hh.Columns.Add("SL");
+        hh.Columns.Add("DG");
+        hh.Columns.Add("TT");
+        hh.Rows.Add(1, "M001", "Máy in laser HP", "Cái", "5", "5,000,000", "25,000,000");
+        hh.Rows.Add(2, "M002", "Máy tính để bàn Dell", "Bộ", "10", "12,000,000", "120,000,000");
+        hh.Rows.Add(3, "M003", "Bàn làm việc gỗ", "Cái", "20", "1,500,000", "30,000,000");
+        ctx.TableSources["HH"] = hh;
+
+        return ctx;
     }
 }

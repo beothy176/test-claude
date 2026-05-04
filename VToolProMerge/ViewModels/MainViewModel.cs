@@ -1,5 +1,4 @@
 using System.Collections.ObjectModel;
-using System.Linq;
 using VToolProMerge.Helpers;
 using VToolProMerge.Models;
 using VToolProMerge.Services;
@@ -29,14 +28,21 @@ public class MainViewModel : ViewModelBase
 
     public MainViewModel()
     {
-        // Khởi tạo services khung. Khi cần kết nối Word/Excel thật, inject ở đây.
-        var logService = new AuditLogService();
-        var templateScanner = new TemplateScanner();
-        var placeholderSvc = new PlaceholderManagerService();
+        // ====== Composition root cho tất cả service ======
+        var word = new WordMergeEngine();
+        var tables = new DynamicTableMerger();
+        var conditional = new ConditionalBlockProcessor();
+        var audit = new AuditLogService();
+        var mapping = new DataMappingEngine();
+        var preview = new PreviewService(word);
+        var batch = new BatchMergeService(word, tables, conditional, audit);
+
         var seed = SeedData.Build();
 
         _templateLib = new TemplateLibraryViewModel(seed.Templates);
-        _batchMerge = new BatchMergeViewModel(seed.Templates, seed.Issues, seed.OutputFiles, seed.Logs);
+        _batchMerge = new BatchMergeViewModel(
+            seed.Templates, seed.Issues, seed.OutputFiles, seed.Logs,
+            batch, mapping, preview);
         _designer = new DesignerViewModel(seed.DataSourceTree, seed.Elements);
         _placeholderMgr = new PlaceholderManagerViewModel(seed.Placeholders);
         _catalog = new CatalogViewModel();
@@ -78,21 +84,21 @@ public class MainViewModel : ViewModelBase
         });
 
         PreviewCommand = new RelayCommand(_ => DialogHelper.Info(
-            "Tính năng Xem thử sẽ render bằng Microsoft Word thật ở phần engine.",
+            "Mở Designer cho mẫu được chọn để xem preview, hoặc dùng nút Demo trong Trộn bộ hồ sơ.",
             "Xem thử"));
         CheckErrorsCommand = new RelayCommand(_ => DialogHelper.Info(
-            "Bộ kiểm tra lỗi sẽ chạy ErrorCheckerService và liệt kê các vấn đề.",
+            "Engine ErrorChecker sẽ chạy: thiếu placeholder / dữ liệu chưa map / bảng động thiếu cột / file thiếu.",
             "Kiểm tra lỗi"));
         GenerateCommand = new RelayCommand(_ =>
         {
             Navigate("batch");
             DialogHelper.Info(
-                "Hãy nhấn nút 'Sinh bộ hồ sơ' bên trong màn Trộn bộ hồ sơ để chạy BatchMergeService.",
+                "Trong màn 'Trộn bộ hồ sơ', nhấn nút lớn 'Sinh bộ hồ sơ' (chạy mẫu thật)\n" +
+                "hoặc 'Demo: Tạo mẫu hợp đồng + sinh thử' (engine tự dựng template).",
                 "Sinh hồ sơ");
         });
     }
 
-    // ========== TOPBAR ==========
     public ObservableCollection<string> Profiles { get; }
     public ObservableCollection<string> CurrentItems { get; }
 
@@ -101,13 +107,11 @@ public class MainViewModel : ViewModelBase
     public string SearchQuery { get => _searchQuery; set => SetProperty(ref _searchQuery, value); }
     public string StatusText { get => _statusText; set => SetProperty(ref _statusText, value); }
 
-    // ========== STATUSBAR ==========
     public string StoragePath { get => _storagePath; set => SetProperty(ref _storagePath, value); }
     public string AppVersion { get => _appVersion; set => SetProperty(ref _appVersion, value); }
     public double StorageUsagePercent { get => _storageUsagePercent; set => SetProperty(ref _storageUsagePercent, value); }
     public string StorageUsageText => $"18.7 GB / 100 GB ({_storageUsagePercent:0.0}%)";
 
-    // ========== NAV ==========
     public ObservableCollection<NavItem> NavItems { get; }
     public RelayCommand NavigateCommand { get; }
     public RelayCommand PreviewCommand { get; }
@@ -130,14 +134,6 @@ public class MainViewModel : ViewModelBase
             "settings"    => _settings,
             _             => _templateLib
         };
-
         foreach (var n in NavItems) n.IsSelected = n.Key == key;
-    }
-
-    /// <summary>Cho phép mở Designer khi user chọn 1 mẫu cụ thể.</summary>
-    public void OpenDesigner()
-    {
-        CurrentView = _designer;
-        foreach (var n in NavItems) n.IsSelected = n.Key == "templates";
     }
 }

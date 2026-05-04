@@ -486,14 +486,25 @@
                     </StackPanel>
                 </StackPanel>
 
-                <Button Grid.Column="2" Style="{StaticResource BtnPrimary}"
-                        Padding="22,10" MinHeight="44"
-                        Command="{Binding GenerateCommand}">
-                    <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="📄" Margin="0,0,8,0" Foreground="White"/>
-                        <TextBlock Text="Sinh bộ hồ sơ" Foreground="White" FontWeight="SemiBold"/>
-                    </StackPanel>
-                </Button>
+                <StackPanel Grid.Column="2" Orientation="Horizontal">
+                    <Button Style="{StaticResource BtnGhost}"
+                            Padding="14,10" MinHeight="44" Margin="0,0,10,0"
+                            Command="{Binding DemoCommand}"
+                            ToolTip="Engine sẽ tự tạo file mẫu Hợp đồng (.docx) trong %TEMP% rồi chạy end-to-end: bảng động + điều kiện + placeholder.">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="🧪" Margin="0,0,8,0"/>
+                            <TextBlock Text="Demo: Tạo mẫu + sinh thử" FontWeight="SemiBold"/>
+                        </StackPanel>
+                    </Button>
+                    <Button Style="{StaticResource BtnPrimary}"
+                            Padding="22,10" MinHeight="44"
+                            Command="{Binding GenerateCommand}">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="📄" Margin="0,0,8,0" Foreground="White"/>
+                            <TextBlock Text="Sinh bộ hồ sơ" Foreground="White" FontWeight="SemiBold"/>
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
             </Grid>
         </Border>
     </Grid>
