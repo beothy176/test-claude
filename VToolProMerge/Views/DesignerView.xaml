@@ -3,6 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:conv="clr-namespace:VToolProMerge.Converters"
              xmlns:m="clr-namespace:VToolProMerge.Models"
+             xmlns:sys="clr-namespace:System;assembly=mscorlib"
              Background="{StaticResource BgAppBrush}">
 
     <UserControl.Resources>
@@ -238,7 +239,7 @@
                                 BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,1,0">
                             <ItemsControl>
                                 <ItemsControl.ItemsSource>
-                                    <x:Array Type="{x:Type sys:Int32}" xmlns:sys="clr-namespace:System;assembly=mscorlib">
+                                    <x:Array Type="{x:Type sys:Int32}">
                                         <sys:Int32>1</sys:Int32><sys:Int32>2</sys:Int32><sys:Int32>3</sys:Int32>
                                         <sys:Int32>4</sys:Int32><sys:Int32>5</sys:Int32><sys:Int32>6</sys:Int32>
                                         <sys:Int32>7</sys:Int32><sys:Int32>8</sys:Int32><sys:Int32>9</sys:Int32>
