@@ -36,18 +36,20 @@ public class MainViewModel : ViewModelBase
         var mapping = new DataMappingEngine();
         var preview = new PreviewService(word);
         var batch = new BatchMergeService(word, tables, conditional, audit);
+        var sources = new DataSourceManager(mapping);
 
         var seed = SeedData.Build();
 
         _templateLib = new TemplateLibraryViewModel(seed.Templates);
         _batchMerge = new BatchMergeViewModel(
             seed.Templates, seed.Issues, seed.OutputFiles, seed.Logs,
-            batch, mapping, preview);
-        _designer = new DesignerViewModel(seed.DataSourceTree, seed.Elements);
+            batch, mapping, preview, sources);
+        _designer = new DesignerViewModel(seed.DataSourceTree, seed.Elements,
+            preview, tables, conditional, sources);
         _placeholderMgr = new PlaceholderManagerViewModel(seed.Placeholders);
         _catalog = new CatalogViewModel();
         _history = new HistoryViewModel(seed.Logs);
-        _dataSource = new DataSourceViewModel();
+        _dataSource = new DataSourceViewModel(sources);
         _profile = new ProfileViewModel();
         _settings = new SettingsViewModel();
 

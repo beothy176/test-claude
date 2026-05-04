@@ -1,7 +1,10 @@
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.IO;
 using VToolProMerge.Helpers;
 using VToolProMerge.Models;
+using VToolProMerge.Services;
 
 namespace VToolProMerge.ViewModels;
 
@@ -30,8 +33,21 @@ public class DesignerViewModel : ViewModelBase
     private string _cellAlign = "Giữa";
     private double _lineSpacing = 1.0;
 
-    public DesignerViewModel(IEnumerable<DataSourceNode> dataSourceTree, IEnumerable<ElementNode> elements)
+    private readonly PreviewService? _previewService;
+    private readonly DynamicTableMerger? _tables;
+    private readonly ConditionalBlockProcessor? _cond;
+    private readonly DataSourceManager? _sources;
+
+    public DesignerViewModel(IEnumerable<DataSourceNode> dataSourceTree, IEnumerable<ElementNode> elements,
+        PreviewService? previewService = null,
+        DynamicTableMerger? tables = null,
+        ConditionalBlockProcessor? cond = null,
+        DataSourceManager? sources = null)
     {
+        _previewService = previewService;
+        _tables = tables;
+        _cond = cond;
+        _sources = sources;
         DataSourceTree = new ObservableCollection<DataSourceNode>(dataSourceTree);
         Elements = new ObservableCollection<ElementNode>(elements);
 
@@ -64,8 +80,7 @@ public class DesignerViewModel : ViewModelBase
             "Chèn ảnh động (Dynamic Image).", "Chèn ảnh"));
         InsertSubdocCommand = new RelayCommand(_ => DialogHelper.Info(
             "Chèn phụ lục dưới dạng Subdocument.", "Chèn phụ lục"));
-        PreviewCommand = new RelayCommand(_ => DialogHelper.Info(
-            "Mở preview bằng Microsoft Word (Interop).", "Xem thử"));
+        PreviewCommand = new RelayCommand(_ => RunPreview());
         CheckErrorsCommand = new RelayCommand(_ => DialogHelper.Info(
             "Chạy ErrorCheckerService cho mẫu hiện tại.", "Kiểm tra lỗi"));
 
@@ -120,5 +135,62 @@ public class DesignerViewModel : ViewModelBase
         public QuickBuilderItem(string icon, string title) { Icon = icon; Title = title; }
         public string Icon { get; }
         public string Title { get; }
+    }
+
+    private void RunPreview()
+    {
+        if (_previewService == null)
+        {
+            DialogHelper.Info("Preview chưa được cấu hình.", "Xem thử");
+            return;
+        }
+        try
+        {
+            // Tạo template demo trong %TEMP% rồi merge với context (ưu tiên data source user đã tải).
+            var dir = Path.Combine(Path.GetTempPath(), "VToolPro_DesignerPreview");
+            Directory.CreateDirectory(dir);
+            var templatePath = SampleTemplateBuilder.CreateContractTemplate(dir);
+
+            MergeContext ctx;
+            if (_sources != null && _sources.HasAny) ctx = _sources.BuildContext();
+            else ctx = BuildDemoContext();
+
+            var preview = _previewService.CreatePreviewDocument(templatePath, ctx, _cond, _tables);
+            _previewService.OpenInWord(preview);
+        }
+        catch (Exception ex)
+        {
+            DialogHelper.Error("Lỗi preview: " + ex.Message);
+        }
+    }
+
+    private static MergeContext BuildDemoContext()
+    {
+        var ctx = new MergeContext();
+        ctx.Tokens["[DONVI_TEN]"] = "CÔNG TY TNHH ABC";
+        ctx.Tokens["[DONVI_MST]"] = "0312345678";
+        ctx.Tokens["[DONVI_DIA_CHI]"] = "Số 1 Nguyễn Văn Cừ, Q.1, TP.HCM";
+        ctx.Tokens["[DONVI_NGUOI_DD]"] = "Nguyễn Văn An";
+        ctx.Tokens["[NT_TEN]"] = "CÔNG TY CP XYZ";
+        ctx.Tokens["[NT_MST]"] = "0398765432";
+        ctx.Tokens["[NT_DIA_CHI]"] = "10 Trần Hưng Đạo, Hà Nội";
+        ctx.Tokens["[NT_DAI_DIEN]"] = "Trần Thị Bích";
+        ctx.Tokens["[SO_HOP_DONG]"] = "DEMO/2025/HD-MB";
+        ctx.Tokens["[NGAY_KY]"] = DateTime.Now.ToString("dd/MM/yyyy");
+        ctx.Tokens["[TONG_TIEN]"] = "100.000.000";
+        ctx.Tokens["[HAS_VAT]"] = "true";
+
+        var hh = new System.Data.DataTable("HangHoa");
+        hh.Columns.Add("STT");
+        hh.Columns.Add("MA");
+        hh.Columns.Add("TEN");
+        hh.Columns.Add("DVT");
+        hh.Columns.Add("SL");
+        hh.Columns.Add("DG");
+        hh.Columns.Add("TT");
+        hh.Rows.Add(1, "M001", "Sản phẩm A", "Cái", "10", "1.000.000", "10.000.000");
+        hh.Rows.Add(2, "M002", "Sản phẩm B", "Bộ", "5", "2.000.000", "10.000.000");
+        ctx.TableSources["HH"] = hh;
+        return ctx;
     }
 }

@@ -35,7 +35,7 @@
             <views:HistoryView/>
         </DataTemplate>
         <DataTemplate DataType="{x:Type vm:DataSourceViewModel}">
-            <views:PlaceholderManagerView/>
+            <views:DataSourceView/>
         </DataTemplate>
         <DataTemplate DataType="{x:Type vm:ProfileViewModel}">
             <views:CatalogView/>

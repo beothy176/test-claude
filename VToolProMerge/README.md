@@ -33,6 +33,67 @@ MainWindow + Sidebar + Topbar + Statusbar và 3 màn hình chính theo bố cụ
 - Khối điều kiện: paragraph chứa duy nhất `[IF:FIELD]` mở đầu, paragraph khác chứa `[ENDIF:FIELD]` đóng. Hỗ trợ `[IF:FIELD=VALUE]` và lồng nhau.
 - Dòng tổng cộng (`[TONG_TIEN]`) là placeholder thường, để ngoài bảng động.
 
+## Part 3 — Data Source UI + Mapping editor + Live Preview
+
+| Module                          | Trạng thái | Chi tiết                                                                                  |
+|---------------------------------|------------|--------------------------------------------------------------------------------------------|
+| `Services/DataSourceManager`    | ✅          | State chia sẻ giữa các ViewModel, expose `BuildContext()` cho BatchMerge.                |
+| `Views/DataSourceView`          | ✅          | Tải JSON / Excel / SQLite, list nguồn đã tải, xem scalar + bảng dữ liệu.                |
+| `PlaceholderManagerView`        | ✅          | Toolbar Import/Export JSON, filter theo nhóm, search, thêm/xóa.                          |
+| `BatchMergeViewModel`           | ✅          | Khi user nhấn "Sinh hồ sơ": ưu tiên data source đã tải, fallback sang demo context.      |
+| `DesignerViewModel.PreviewCommand` | ✅       | Chạy real pipeline: dựng template demo → merge với MergeContext → mở bằng Microsoft Word. |
+
+### Cấu trúc file JSON nguồn
+```json
+{
+  "Scalars": { "DONVI_TEN": "Cty ABC", "SO_HOP_DONG": "001/2025" },
+  "Tables": { "HH": [ { "STT": 1, "MA": "M001", ... } ] }
+}
+```
+
+### Cấu trúc file Excel nguồn
+- Sheet `Scalars` (cột `Key`, `Value`) → field scalar.
+- Mỗi sheet còn lại → bảng dữ liệu, key = tên sheet.
+
+### Cấu trúc SQLite nguồn
+- Bảng `Scalars(Key TEXT, Value TEXT)` → field scalar.
+- Các bảng khác → bảng dữ liệu (whitelist auto-detect).
+
+## Part 4 — Installer
+
+Đóng gói thành 1 file `.exe` setup chạy offline trên Windows.
+
+### 4.1. Yêu cầu
+- .NET 8 SDK trên máy build (`dotnet --version`).
+- [Inno Setup 6](https://jrsoftware.org/isinfo.php) trên máy build.
+
+### 4.2. Build 1 dòng lệnh
+```bat
+cd VToolProMerge\Installer
+build_installer.bat
+```
+
+Script sẽ:
+1. `dotnet publish` self-contained, single-file (win-x64).
+2. Gọi `ISCC.exe` compile script `VToolProMerge.iss`.
+3. Output: `Installer\Output\VToolProMergeSetup-2.1.0.0.exe`.
+
+### 4.3. Build thủ công (nếu cần custom)
+```bat
+dotnet publish VToolProMerge.csproj -c Release -r win-x64 ^
+    --self-contained true /p:PublishSingleFile=true ^
+    /p:IncludeNativeLibrariesForSelfExtract=true ^
+    -o Installer\publish
+"%ProgramFiles(x86)%\Inno Setup 6\ISCC.exe" Installer\VToolProMerge.iss
+```
+
+### 4.4. Cấu hình installer
+- Tên app: `VToolPro Merge`.
+- Version: chỉnh trong `VToolProMerge.iss` ở `#define AppVersion`.
+- AppId GUID: đổi nếu phát hành chính thức để uninstall đúng key.
+- Tasks tùy chọn: Desktop shortcut + Start Menu shortcut.
+- Privileges: `lowest` (cho phép cài per-user, không cần admin).
+
 ---
 
 ## 1. Mở bằng Visual Studio 2022

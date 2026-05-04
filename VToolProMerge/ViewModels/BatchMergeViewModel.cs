@@ -16,6 +16,7 @@ public class BatchMergeViewModel : ViewModelBase
     private readonly BatchMergeService _batch;
     private readonly DataMappingEngine _mapping;
     private readonly PreviewService _preview;
+    private readonly DataSourceManager _sources;
     private readonly List<TemplateItem> _templateCatalog;
 
     private string _outputDir = @"D:\VToolProMerge\Output\HS_ABC_01";
@@ -38,11 +39,13 @@ public class BatchMergeViewModel : ViewModelBase
         IEnumerable<AuditLogItem> seedLogs,
         BatchMergeService batchService,
         DataMappingEngine mapping,
-        PreviewService preview)
+        PreviewService preview,
+        DataSourceManager sources)
     {
         _batch = batchService;
         _mapping = mapping;
         _preview = preview;
+        _sources = sources;
         _templateCatalog = seedTemplates.ToList();
 
         Templates = new ObservableCollection<BatchTemplateItem>(
@@ -160,7 +163,10 @@ public class BatchMergeViewModel : ViewModelBase
             return;
         }
 
-        await RunPipelineAsync(resolved, BuildDemoContext());
+        // Ưu tiên MergeContext từ các nguồn dữ liệu user đã tải;
+        // Nếu chưa có nguồn nào, fallback sang context demo.
+        var ctx = _sources.HasAny ? _sources.BuildContext() : BuildDemoContext();
+        await RunPipelineAsync(resolved, ctx);
     }
 
     private async Task RunDemoAsync()
