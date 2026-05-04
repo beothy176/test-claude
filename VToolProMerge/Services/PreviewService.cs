@@ -1,11 +1,13 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Reflection;
 
 namespace VToolProMerge.Services;
 
 /// <summary>
-/// Tạo bản preview cho 1 mẫu: copy template ra %TEMP% -> trộn -> mở Word (Interop late-bound).
+/// Tạo bản preview cho 1 mẫu: copy template ra %TEMP% -> trộn -> mở Word qua COM.
+/// Dùng Reflection thuần thay vì dynamic để tránh phụ thuộc Microsoft.CSharp.
 /// </summary>
 public class PreviewService
 {
@@ -36,23 +38,27 @@ public class PreviewService
     }
 
     /// <summary>
-    /// Mở file trong Microsoft Word. Yêu cầu Word đã cài đặt.
-    /// Nếu không tìm thấy COM, fallback sang shell (Process.Start).
+    /// Mở file trong Microsoft Word qua COM (Reflection late-bound).
+    /// Nếu Word chưa cài, fallback sang shell mặc định.
     /// </summary>
     public void OpenInWord(string filePath)
     {
         var wordType = Type.GetTypeFromProgID("Word.Application");
         if (wordType == null)
         {
-            // Fallback: mở bằng app mặc định.
             System.Diagnostics.Process.Start(
                 new System.Diagnostics.ProcessStartInfo(filePath) { UseShellExecute = true });
             AddLog("Mở bằng shell vì không tìm thấy Microsoft Word.");
             return;
         }
-        dynamic word = Activator.CreateInstance(wordType)!;
-        word.Visible = true;
-        word.Documents.Open(Path.GetFullPath(filePath));
+        var word = Activator.CreateInstance(wordType)!;
+        wordType.InvokeMember("Visible",
+            BindingFlags.SetProperty, null, word, new object[] { true });
+        var documents = wordType.InvokeMember("Documents",
+            BindingFlags.GetProperty, null, word, null)!;
+        documents.GetType().InvokeMember("Open",
+            BindingFlags.InvokeMethod, null, documents,
+            new object[] { Path.GetFullPath(filePath) });
     }
 
     public IReadOnlyList<string> LogPreviewErrors() => _logs;

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Reflection;
 using DocumentFormat.OpenXml.Packaging;
 using VToolProMerge.Helpers;
 
@@ -9,15 +10,11 @@ namespace VToolProMerge.Services;
 /// <summary>
 /// Engine trộn Word thật. Thay placeholder dạng [TEN_TRUONG] an toàn cho trường hợp
 /// Word tách 1 chuỗi thành nhiều Run (split-runs). Áp dụng cho body, header, footer,
-/// footnote, endnote. Xuất PDF qua Microsoft Word Interop (late-bound COM, không bắt
-/// buộc cài Office trên máy build).
+/// footnote, endnote. Xuất PDF qua Microsoft Word COM (Reflection late-bound, không
+/// bắt buộc cài Office trên máy build).
 /// </summary>
 public class WordMergeEngine
 {
-    /// <summary>
-    /// Tạo file output bằng cách copy template, chạy điều kiện, thay placeholder.
-    /// Bảng động được xử lý ở DynamicTableMerger (gọi sau khi ReplacePlaceholders).
-    /// </summary>
     public void MergeSingleDocument(string sourceTemplate, string outputPath,
         IReadOnlyDictionary<string, string?> values,
         ConditionalBlockProcessor? conditional = null,
@@ -31,11 +28,7 @@ public class WordMergeEngine
         if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
         File.Copy(sourceTemplate, outputPath, overwrite: true);
 
-        // Thứ tự xử lý:
-        //  1) Bảng động (clone row trước khi thay placeholder để placeholder trong bảng
-        //     được nhân bản đúng theo từng dòng dữ liệu).
-        //  2) Khối điều kiện (xóa block khi điều kiện sai).
-        //  3) Thay placeholder.
+        // Pipeline: bảng động -> điều kiện -> placeholder.
         if (tableMerger != null && tableSources != null && tableSources.Count > 0)
             tableMerger.MergeTables(outputPath, tableSources);
 
@@ -60,8 +53,9 @@ public class WordMergeEngine
     }
 
     /// <summary>
-    /// Xuất DOCX sang PDF qua Microsoft Word Interop (COM trễ — không cần reference Interop).
-    /// Yêu cầu Microsoft Word đã cài trên máy chạy.
+    /// Xuất DOCX sang PDF qua Microsoft Word COM (Reflection late-bound — không cần
+    /// reference Microsoft.Office.Interop.Word lúc build). Yêu cầu Word cài trên máy
+    /// chạy.
     /// </summary>
     public void ExportToPdf(string docxPath, string pdfPath)
     {
@@ -69,41 +63,45 @@ public class WordMergeEngine
             ?? throw new InvalidOperationException(
                 "Microsoft Word chưa cài trên máy này — không thể xuất PDF.");
 
-        dynamic word = Activator.CreateInstance(wordType)!;
+        var word = Activator.CreateInstance(wordType)!;
         try
         {
-            word.Visible = false;
-            word.DisplayAlerts = 0; // wdAlertsNone
-            dynamic doc = word.Documents.Open(
-                FileName: Path.GetFullPath(docxPath),
-                ConfirmConversions: false,
-                ReadOnly: true,
-                AddToRecentFiles: false);
+            Set(word, wordType, "Visible", false);
+            Set(word, wordType, "DisplayAlerts", 0);
+
+            var documents = Get(word, wordType, "Documents")!;
+            var doc = Invoke(documents, "Open", new object[]
+            {
+                Path.GetFullPath(docxPath),
+                false, // ConfirmConversions
+                true   // ReadOnly
+            })!;
             try
             {
                 // wdExportFormatPDF = 17
-                doc.ExportAsFixedFormat(
-                    OutputFileName: Path.GetFullPath(pdfPath),
-                    ExportFormat: 17,
-                    OpenAfterExport: false,
-                    OptimizeFor: 0,           // wdExportOptimizeForPrint
-                    Range: 0,                  // wdExportAllDocument
-                    Item: 7,                   // wdExportDocumentWithMarkup
-                    IncludeDocProps: true,
-                    KeepIRM: true,
-                    CreateBookmarks: 0,
-                    DocStructureTags: true,
-                    BitmapMissingFonts: true,
-                    UseISO19005_1: false);
+                Invoke(doc, "ExportAsFixedFormat", new object[]
+                {
+                    Path.GetFullPath(pdfPath),
+                    17 // ExportFormat
+                });
             }
             finally
             {
-                doc.Close(SaveChanges: 0); // wdDoNotSaveChanges
+                Invoke(doc, "Close", new object[] { 0 }); // wdDoNotSaveChanges
             }
         }
         finally
         {
-            word.Quit(SaveChanges: 0);
+            Invoke(word, "Quit", new object[] { 0 });
         }
     }
+
+    private static void Set(object target, Type type, string name, object value)
+        => type.InvokeMember(name, BindingFlags.SetProperty, null, target, new[] { value });
+
+    private static object? Get(object target, Type type, string name)
+        => type.InvokeMember(name, BindingFlags.GetProperty, null, target, null);
+
+    private static object? Invoke(object target, string name, object[] args)
+        => target.GetType().InvokeMember(name, BindingFlags.InvokeMethod, null, target, args);
 }
