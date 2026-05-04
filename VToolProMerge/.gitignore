@@ -1,0 +1,9 @@
+## Visual Studio / .NET
+bin/
+obj/
+*.user
+*.suo
+.vs/
+.idea/
+*.lock.json
+artifacts/

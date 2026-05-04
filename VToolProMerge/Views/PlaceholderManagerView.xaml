@@ -1,0 +1,25 @@
+<UserControl x:Class="VToolProMerge.Views.PlaceholderManagerView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Background="{StaticResource BgAppBrush}">
+    <Grid Margin="24,20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+        <TextBlock Text="Placeholder" Style="{StaticResource H1}" Margin="0,0,0,16"/>
+        <Border Grid.Row="1" Style="{StaticResource Card}">
+            <DataGrid ItemsSource="{Binding Items}">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="Token" Binding="{Binding Token}" Width="220"
+                                        FontFamily="Consolas"/>
+                    <DataGridTextColumn Header="Tên hiển thị" Binding="{Binding DisplayName}" Width="*"/>
+                    <DataGridTextColumn Header="Nhóm" Binding="{Binding Group}" Width="200"/>
+                    <DataGridTextColumn Header="Kiểu" Binding="{Binding DataType}" Width="100"/>
+                    <DataGridTextColumn Header="Nguồn" Binding="{Binding Source}" Width="120"/>
+                    <DataGridCheckBoxColumn Header="Bắt buộc" Binding="{Binding Required}" Width="80"/>
+                </DataGrid.Columns>
+            </DataGrid>
+        </Border>
+    </Grid>
+</UserControl>
