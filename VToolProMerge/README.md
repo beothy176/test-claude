@@ -59,11 +59,30 @@ MainWindow + Sidebar + Topbar + Statusbar và 3 màn hình chính theo bố cụ
 - Bảng `Scalars(Key TEXT, Value TEXT)` → field scalar.
 - Các bảng khác → bảng dữ liệu (whitelist auto-detect).
 
-## Part 4 — Installer
+## Part 4 — Đóng gói để chuyển sang máy khác dùng
 
-Đóng gói thành 1 file `.exe` setup chạy offline trên Windows.
+Có **2 cách**, chọn 1:
 
-### 4.1. Yêu cầu
+| Cách | File output | Yêu cầu trên máy build | Yêu cầu trên máy đích |
+|---|---|---|---|
+| **A — Portable ZIP** (đơn giản nhất) | `VToolProMerge-Portable-2.1.0.0-win-x64.zip` (~80 MB) | .NET 8 SDK | Không cần gì cả — giải nén và chạy |
+| **B — Installer .exe** | `VToolProMergeSetup-2.1.0.0.exe` (~70 MB) | .NET 8 SDK + Inno Setup 6 | Không cần gì cả — chạy setup |
+
+### A. Đóng gói Portable (khuyến nghị nếu chỉ cần chuyển máy)
+1. Trên máy có .NET 8 SDK, mở **Command Prompt** ở thư mục `VToolProMerge\Installer`.
+2. Chạy:
+   ```bat
+   build_portable.bat
+   ```
+3. File `VToolProMerge-Portable-2.1.0.0-win-x64.zip` được tạo trong cùng thư mục.
+4. Copy file zip sang máy đích → chuột phải → **Extract All** → chạy `VToolProMerge.exe`.
+
+> Self-contained (kèm .NET runtime) nên máy đích **không cần cài .NET**.
+> Muốn xuất PDF → máy đích cần Microsoft Word. Trộn DOCX không cần Word.
+
+### B. Đóng gói Installer (.exe setup chuyên nghiệp)
+
+#### 4.1. Yêu cầu
 - .NET 8 SDK trên máy build (`dotnet --version`).
 - [Inno Setup 6](https://jrsoftware.org/isinfo.php) trên máy build.
 
