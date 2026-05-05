@@ -1,0 +1,307 @@
+<Window x:Class="VToolProMerge.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:VToolProMerge.ViewModels"
+        xmlns:views="clr-namespace:VToolProMerge.Views"
+        Title="VToolPro Merge"
+        Width="1600" Height="900"
+        MinWidth="1200" MinHeight="720"
+        WindowStartupLocation="CenterScreen"
+        Background="{StaticResource BgAppBrush}"
+        FontFamily="{StaticResource FontFamilyDefault}">
+
+    <Window.DataContext>
+        <vm:MainViewModel/>
+    </Window.DataContext>
+
+    <Window.Resources>
+        <!-- View templates: each ViewModel -> matching View -->
+        <DataTemplate DataType="{x:Type vm:TemplateLibraryViewModel}">
+            <views:TemplateLibraryView/>
+        </DataTemplate>
+        <DataTemplate DataType="{x:Type vm:BatchMergeViewModel}">
+            <views:BatchMergeView/>
+        </DataTemplate>
+        <DataTemplate DataType="{x:Type vm:DesignerViewModel}">
+            <views:DesignerView/>
+        </DataTemplate>
+        <DataTemplate DataType="{x:Type vm:PlaceholderManagerViewModel}">
+            <views:PlaceholderManagerView/>
+        </DataTemplate>
+        <DataTemplate DataType="{x:Type vm:CatalogViewModel}">
+            <views:CatalogView/>
+        </DataTemplate>
+        <DataTemplate DataType="{x:Type vm:HistoryViewModel}">
+            <views:HistoryView/>
+        </DataTemplate>
+        <DataTemplate DataType="{x:Type vm:DataSourceViewModel}">
+            <views:DataSourceView/>
+        </DataTemplate>
+        <DataTemplate DataType="{x:Type vm:ProfileViewModel}">
+            <views:ProfileView/>
+        </DataTemplate>
+        <DataTemplate DataType="{x:Type vm:SettingsViewModel}">
+            <views:SettingsView/>
+        </DataTemplate>
+    </Window.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>   <!-- Topbar -->
+            <RowDefinition Height="*"/>      <!-- Body -->
+            <RowDefinition Height="Auto"/>   <!-- Statusbar -->
+        </Grid.RowDefinitions>
+
+        <!-- ===================== TOPBAR ===================== -->
+        <Border Grid.Row="0"
+                Background="{StaticResource BgTopbarBrush}"
+                BorderBrush="{StaticResource BorderBrush}"
+                BorderThickness="0,0,0,1">
+            <Grid Margin="20,12">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="220"/>  <!-- Brand -->
+                    <ColumnDefinition Width="220"/>  <!-- Hồ sơ làm việc -->
+                    <ColumnDefinition Width="240"/>  <!-- Mẫu hiện tại / Gói hồ sơ -->
+                    <ColumnDefinition Width="*"/>    <!-- Search -->
+                    <ColumnDefinition Width="Auto"/> <!-- Action buttons -->
+                </Grid.ColumnDefinitions>
+
+                <!-- Brand -->
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <Border Width="32" Height="32"
+                            Background="{StaticResource BrandPrimaryBrush}"
+                            CornerRadius="8" Margin="0,0,10,0">
+                        <TextBlock Text="V" Foreground="White"
+                                   FontSize="18" FontWeight="Bold"
+                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+                    <TextBlock Text="VToolPro Merge"
+                               FontSize="16" FontWeight="SemiBold"
+                               VerticalAlignment="Center"/>
+                </StackPanel>
+
+                <!-- Hồ sơ làm việc -->
+                <StackPanel Grid.Column="1" Margin="20,0,8,0" VerticalAlignment="Center">
+                    <TextBlock Text="Hồ sơ làm việc" Style="{StaticResource Caption}" Margin="2,0,0,4"/>
+                    <ComboBox ItemsSource="{Binding Profiles}"
+                              SelectedItem="{Binding CurrentProfile}"/>
+                </StackPanel>
+
+                <!-- Mẫu / Gói hồ sơ hiện tại -->
+                <StackPanel Grid.Column="2" Margin="8,0,8,0" VerticalAlignment="Center">
+                    <TextBlock Text="Mẫu / Gói hồ sơ hiện tại" Style="{StaticResource Caption}" Margin="2,0,0,4"/>
+                    <ComboBox ItemsSource="{Binding CurrentItems}"
+                              SelectedItem="{Binding CurrentItem}"/>
+                </StackPanel>
+
+                <!-- Search -->
+                <Border Grid.Column="3"
+                        Background="White"
+                        BorderBrush="{StaticResource BorderBrush}"
+                        BorderThickness="1"
+                        CornerRadius="8"
+                        Margin="8,16,12,0"
+                        VerticalAlignment="Center"
+                        Height="36">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="🔍" Margin="12,0,8,0"
+                                   VerticalAlignment="Center"
+                                   Foreground="{StaticResource TextMutedBrush}"/>
+                        <TextBox Grid.Column="1"
+                                 Text="{Binding SearchQuery, UpdateSourceTrigger=PropertyChanged}"
+                                 BorderThickness="0"
+                                 Background="Transparent"
+                                 VerticalAlignment="Center"
+                                 Padding="0,0,12,0"
+                                 ToolTip="Tìm kiếm mẫu, placeholder, hồ sơ..."/>
+                    </Grid>
+                </Border>
+
+                <!-- Action buttons -->
+                <StackPanel Grid.Column="4" Orientation="Horizontal" VerticalAlignment="Center" Margin="8,16,0,0">
+                    <Button Style="{StaticResource TopbarBtn}" Margin="0,0,8,0"
+                            Command="{Binding PreviewCommand}">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="👁" Margin="0,0,6,0"/>
+                            <TextBlock Text="Xem thử"/>
+                        </StackPanel>
+                    </Button>
+                    <Button Style="{StaticResource TopbarBtn}" Margin="0,0,8,0"
+                            Command="{Binding CheckErrorsCommand}">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="⚠" Margin="0,0,6,0"/>
+                            <TextBlock Text="Kiểm tra lỗi"/>
+                        </StackPanel>
+                    </Button>
+                    <Button Style="{StaticResource BtnPrimary}" Margin="0,0,12,0"
+                            Command="{Binding GenerateCommand}">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="📄" Margin="0,0,6,0" Foreground="White"/>
+                            <TextBlock Text="Sinh hồ sơ" Foreground="White"/>
+                        </StackPanel>
+                    </Button>
+
+                    <!-- Status pill -->
+                    <Border Background="{StaticResource SuccessSoftBrush}"
+                            CornerRadius="8" Padding="10,6">
+                        <StackPanel Orientation="Horizontal">
+                            <Ellipse Width="8" Height="8" Fill="{StaticResource SuccessBrush}"
+                                     VerticalAlignment="Center" Margin="0,0,8,0"/>
+                            <TextBlock Text="{Binding StatusText}"
+                                       Foreground="{StaticResource SuccessBrush}"
+                                       FontWeight="SemiBold" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- ===================== BODY ===================== -->
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="220"/> <!-- Sidebar -->
+                <ColumnDefinition Width="*"/>   <!-- Content -->
+            </Grid.ColumnDefinitions>
+
+            <!-- ===================== SIDEBAR ===================== -->
+            <Border Background="{StaticResource BgSidebarBrush}"
+                    BorderBrush="{StaticResource BorderBrush}"
+                    BorderThickness="0,0,1,0">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <ScrollViewer VerticalScrollBarVisibility="Auto">
+                        <StackPanel Margin="0,12,0,12">
+                            <ItemsControl ItemsSource="{Binding NavItems}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <RadioButton Style="{StaticResource SidebarItem}"
+                                                     GroupName="MainNav"
+                                                     IsChecked="{Binding IsSelected, Mode=TwoWay}"
+                                                     Command="{Binding DataContext.NavigateCommand,
+                                                               RelativeSource={RelativeSource AncestorType=Window}}"
+                                                     CommandParameter="{Binding}">
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Text="{Binding Icon}"
+                                                           FontSize="16"
+                                                           Width="24"
+                                                           Margin="0,0,10,0"
+                                                           VerticalAlignment="Center"/>
+                                                <TextBlock Text="{Binding Title}"
+                                                           VerticalAlignment="Center"/>
+                                            </StackPanel>
+                                        </RadioButton>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+                    </ScrollViewer>
+
+                    <!-- Sidebar bottom: version + offline -->
+                    <Border Grid.Row="1"
+                            BorderBrush="{StaticResource BorderBrush}"
+                            BorderThickness="0,1,0,0"
+                            Padding="16,12">
+                        <StackPanel>
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                                <TextBlock Text="Phiên bản"
+                                           Style="{StaticResource Caption}"
+                                           Margin="0,0,8,0"/>
+                                <TextBlock Text="{Binding AppVersion}"
+                                           FontSize="12" FontWeight="SemiBold"
+                                           Foreground="{StaticResource TextSecondaryBrush}"/>
+                            </StackPanel>
+                            <Border Background="{StaticResource BgChipBrush}"
+                                    CornerRadius="6" Padding="8,4">
+                                <StackPanel Orientation="Horizontal">
+                                    <Ellipse Width="6" Height="6"
+                                             Fill="{StaticResource SuccessBrush}"
+                                             Margin="0,0,6,0"
+                                             VerticalAlignment="Center"/>
+                                    <TextBlock Text="Offline (Cục bộ)"
+                                               FontSize="11"
+                                               Foreground="{StaticResource TextSecondaryBrush}"
+                                               VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+                    </Border>
+                </Grid>
+            </Border>
+
+            <!-- ===================== CONTENT ===================== -->
+            <ContentControl Grid.Column="1" Content="{Binding CurrentView}"/>
+        </Grid>
+
+        <!-- ===================== STATUSBAR ===================== -->
+        <Border Grid.Row="2"
+                Background="{StaticResource BgPanelBrush}"
+                BorderBrush="{StaticResource BorderBrush}"
+                BorderThickness="0,1,0,0"
+                Padding="20,8">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <TextBlock Text="{Binding AppVersion}"
+                           Style="{StaticResource Caption}"
+                           VerticalAlignment="Center"/>
+
+                <TextBlock Grid.Column="1" Margin="20,0,0,0"
+                           VerticalAlignment="Center">
+                    <Run Text="Đường dẫn lưu trữ: "
+                         Foreground="{StaticResource TextMutedBrush}"/>
+                    <Run Text="{Binding StoragePath}"
+                         Foreground="{StaticResource BrandPrimaryBrush}"
+                         FontWeight="SemiBold"/>
+                </TextBlock>
+
+                <StackPanel Grid.Column="2" Orientation="Horizontal" Margin="20,0,0,0" VerticalAlignment="Center">
+                    <TextBlock Text="Dung lượng: "
+                               Foreground="{StaticResource TextMutedBrush}"
+                               FontSize="12"/>
+                    <TextBlock Text="{Binding StorageUsageText}"
+                               Foreground="{StaticResource TextPrimaryBrush}"
+                               FontSize="12" FontWeight="SemiBold" Margin="4,0,0,0"/>
+                </StackPanel>
+
+                <ProgressBar Grid.Column="3"
+                             Margin="20,0,20,0"
+                             Height="6"
+                             Width="200"
+                             HorizontalAlignment="Left"
+                             VerticalAlignment="Center"
+                             Minimum="0" Maximum="100"
+                             Value="{Binding StorageUsagePercent}"
+                             Background="{StaticResource BgChipBrush}"
+                             Foreground="{StaticResource BrandPrimaryBrush}"
+                             BorderThickness="0"/>
+
+                <StackPanel Grid.Column="4" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Ellipse Width="8" Height="8"
+                             Fill="{StaticResource SuccessBrush}"
+                             Margin="0,0,6,0"
+                             VerticalAlignment="Center"/>
+                    <TextBlock Text="Chế độ: "
+                               Foreground="{StaticResource TextMutedBrush}"
+                               FontSize="12" VerticalAlignment="Center"/>
+                    <TextBlock Text="Offline (Cục bộ)"
+                               FontWeight="SemiBold"
+                               FontSize="12" VerticalAlignment="Center" Margin="2,0,0,0"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+    </Grid>
+</Window>

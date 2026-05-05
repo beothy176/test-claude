@@ -1,0 +1,30 @@
+{
+  "Scalars": {
+    "DONVI_TEN": "CÔNG TY TNHH ABC",
+    "DONVI_MST": "0312345678",
+    "DONVI_DIA_CHI": "Số 1 Nguyễn Văn Cừ, Q.1, TP.HCM",
+    "DONVI_NGUOI_DD": "Nguyễn Văn An",
+    "DONVI_CHUC_VU": "Giám đốc",
+
+    "NT_TEN": "CÔNG TY CP XYZ",
+    "NT_MST": "0398765432",
+    "NT_DIA_CHI": "10 Trần Hưng Đạo, Q. Hoàn Kiếm, Hà Nội",
+    "NT_DAI_DIEN": "Trần Thị Bích",
+    "NT_CHUC_VU": "Tổng giám đốc",
+
+    "SO_HOP_DONG": "025/2025/HD-MB",
+    "NGAY_KY": "15/05/2025",
+    "TONG_TIEN": "175.000.000",
+    "HAS_VAT": "true",
+
+    "SO_HOSO": "HS001",
+    "TEN_GOI_THAU": "GoiThauVanPhongPham01"
+  },
+  "Tables": {
+    "HH": [
+      { "STT": 1, "MA": "M001", "TEN": "Máy in laser HP",      "DVT": "Cái", "SL": 5,  "DG": 5000000,  "TT": 25000000 },
+      { "STT": 2, "MA": "M002", "TEN": "Máy tính để bàn Dell", "DVT": "Bộ",  "SL": 10, "DG": 12000000, "TT": 120000000 },
+      { "STT": 3, "MA": "M003", "TEN": "Bàn làm việc gỗ",      "DVT": "Cái", "SL": 20, "DG": 1500000,  "TT": 30000000 }
+    ]
+  }
+}

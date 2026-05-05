@@ -1,0 +1,136 @@
+<UserControl x:Class="VToolProMerge.Views.SettingsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Background="{StaticResource BgAppBrush}">
+    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+        <Grid Margin="24,20" MaxWidth="900" HorizontalAlignment="Left">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <!-- Header -->
+            <StackPanel Grid.Row="0">
+                <TextBlock Text="{Binding Title}" Style="{StaticResource H1}"/>
+                <TextBlock Text="{Binding Description}"
+                           Style="{StaticResource BodySecondary}" Margin="0,8,0,0"
+                           TextWrapping="Wrap"/>
+            </StackPanel>
+
+            <!-- Group: Đường dẫn -->
+            <Border Grid.Row="1" Style="{StaticResource Card}" Margin="0,16,0,0">
+                <StackPanel>
+                    <TextBlock Text="Đường dẫn lưu trữ" Style="{StaticResource H2}"/>
+                    <TextBlock Text="Vị trí app lưu dữ liệu hồ sơ và file đã sinh ra."
+                               Style="{StaticResource Caption}" Margin="0,4,0,12"/>
+
+                    <TextBlock Text="Thư mục dữ liệu" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBox Text="{Binding StoragePath, UpdateSourceTrigger=PropertyChanged}"
+                                 Padding="8,6" VerticalContentAlignment="Center"/>
+                        <Button Grid.Column="1" Content="Chọn..." Style="{StaticResource BtnGhost}"
+                                Command="{Binding BrowseStorageCommand}" Margin="8,0,0,0"/>
+                    </Grid>
+
+                    <TextBlock Text="Thư mục xuất file" FontWeight="SemiBold" Margin="0,12,0,4"/>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBox Text="{Binding OutputPath, UpdateSourceTrigger=PropertyChanged}"
+                                 Padding="8,6" VerticalContentAlignment="Center"/>
+                        <Button Grid.Column="1" Content="Chọn..." Style="{StaticResource BtnGhost}"
+                                Command="{Binding BrowseOutputCommand}" Margin="8,0,0,0"/>
+                    </Grid>
+                </StackPanel>
+            </Border>
+
+            <!-- Group: Văn bản mặc định -->
+            <Border Grid.Row="2" Style="{StaticResource Card}" Margin="0,16,0,0">
+                <StackPanel>
+                    <TextBlock Text="Văn bản &amp; định dạng mặc định" Style="{StaticResource H2}"/>
+                    <TextBlock Text="Áp dụng cho mẫu mới, không ảnh hưởng mẫu đã có."
+                               Style="{StaticResource Caption}" Margin="0,4,0,12"/>
+
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="16"/>
+                            <ColumnDefinition Width="180"/>
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0">
+                            <TextBlock Text="Font mặc định" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                            <ComboBox ItemsSource="{Binding FontOptions}"
+                                      SelectedItem="{Binding DefaultFont, Mode=TwoWay}"
+                                      Padding="8,6"/>
+                        </StackPanel>
+                        <StackPanel Grid.Column="2">
+                            <TextBlock Text="Cỡ chữ" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                            <ComboBox ItemsSource="{Binding FontSizeOptions}"
+                                      Text="{Binding DefaultFontSize, Mode=TwoWay}"
+                                      IsEditable="True" Padding="8,6"/>
+                        </StackPanel>
+                    </Grid>
+
+                    <TextBlock Text="Định dạng xuất file mặc định" FontWeight="SemiBold" Margin="0,16,0,4"/>
+                    <ComboBox ItemsSource="{Binding ExportFormatOptions}"
+                              SelectedItem="{Binding ExportFormat, Mode=TwoWay}"
+                              Padding="8,6" HorizontalAlignment="Left" MinWidth="200"/>
+
+                    <TextBlock Text="Cú pháp placeholder" FontWeight="SemiBold" Margin="0,16,0,4"/>
+                    <ComboBox ItemsSource="{Binding PlaceholderStyleOptions}"
+                              SelectedItem="{Binding PlaceholderStyle, Mode=TwoWay}"
+                              Padding="8,6" HorizontalAlignment="Left" MinWidth="240"/>
+                </StackPanel>
+            </Border>
+
+            <!-- Group: Tích hợp -->
+            <Border Grid.Row="3" Style="{StaticResource Card}" Margin="0,16,0,0">
+                <StackPanel>
+                    <TextBlock Text="Tích hợp &amp; hành vi" Style="{StaticResource H2}" Margin="0,0,0,12"/>
+                    <CheckBox Content="Dùng Microsoft Office Interop khi có Word cài đặt"
+                              IsChecked="{Binding UseOfficeInterop, Mode=TwoWay}"
+                              Margin="0,4"/>
+                    <CheckBox Content="Ghi nhật ký kiểm toán (Audit log)"
+                              IsChecked="{Binding AuditLogEnabled, Mode=TwoWay}"
+                              Margin="0,4"/>
+                    <CheckBox Content="Xác nhận trước khi xoá dữ liệu"
+                              IsChecked="{Binding ConfirmBeforeDelete, Mode=TwoWay}"
+                              Margin="0,4"/>
+                    <CheckBox Content="Tự động kiểm tra cập nhật khi khởi động"
+                              IsChecked="{Binding CheckUpdates, Mode=TwoWay}"
+                              Margin="0,4"/>
+                </StackPanel>
+            </Border>
+
+            <!-- Group: Ngôn ngữ -->
+            <Border Grid.Row="4" Style="{StaticResource Card}" Margin="0,16,0,0">
+                <StackPanel>
+                    <TextBlock Text="Ngôn ngữ giao diện" Style="{StaticResource H2}" Margin="0,0,0,12"/>
+                    <ComboBox ItemsSource="{Binding LanguageOptions}"
+                              SelectedItem="{Binding Language, Mode=TwoWay}"
+                              Padding="8,6" HorizontalAlignment="Left" MinWidth="200"/>
+                </StackPanel>
+            </Border>
+
+            <!-- Footer actions -->
+            <StackPanel Grid.Row="5" Orientation="Horizontal" Margin="0,20,0,40">
+                <Button Content="Áp dụng" Style="{StaticResource BtnPrimary}"
+                        Command="{Binding ApplyCommand}"/>
+                <Button Content="Đặt lại mặc định" Style="{StaticResource BtnGhost}" Margin="8,0,0,0"
+                        Command="{Binding ResetCommand}"/>
+            </StackPanel>
+        </Grid>
+    </ScrollViewer>
+</UserControl>

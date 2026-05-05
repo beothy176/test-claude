@@ -1,0 +1,27 @@
+[
+  { "FieldName": "DONVI_TEN",       "DisplayName": "Tên đơn vị",        "Group": "Thông tin đơn vị",   "DataType": "Text",  "Required": true },
+  { "FieldName": "DONVI_MST",       "DisplayName": "Mã số thuế đơn vị", "Group": "Thông tin đơn vị",   "DataType": "Text" },
+  { "FieldName": "DONVI_DIA_CHI",   "DisplayName": "Địa chỉ đơn vị",    "Group": "Thông tin đơn vị",   "DataType": "Text" },
+  { "FieldName": "DONVI_NGUOI_DD",  "DisplayName": "Người đại diện",    "Group": "Thông tin đơn vị",   "DataType": "Text" },
+  { "FieldName": "DONVI_CHUC_VU",   "DisplayName": "Chức vụ",           "Group": "Thông tin đơn vị",   "DataType": "Text" },
+
+  { "FieldName": "NT_TEN",          "DisplayName": "Tên nhà thầu",      "Group": "Thông tin nhà thầu", "DataType": "Text", "Required": true },
+  { "FieldName": "NT_MST",          "DisplayName": "Mã số thuế",        "Group": "Thông tin nhà thầu", "DataType": "Text" },
+  { "FieldName": "NT_DIA_CHI",      "DisplayName": "Địa chỉ",           "Group": "Thông tin nhà thầu", "DataType": "Text" },
+  { "FieldName": "NT_DAI_DIEN",     "DisplayName": "Đại diện",          "Group": "Thông tin nhà thầu", "DataType": "Text" },
+  { "FieldName": "NT_CHUC_VU",      "DisplayName": "Chức vụ",           "Group": "Thông tin nhà thầu", "DataType": "Text" },
+  { "FieldName": "NT_TAI_KHOAN",    "DisplayName": "Tài khoản",         "Group": "Thông tin nhà thầu", "DataType": "Text" },
+  { "FieldName": "NT_NGAN_HANG",    "DisplayName": "Ngân hàng",         "Group": "Thông tin nhà thầu", "DataType": "Text" },
+
+  { "FieldName": "SO_HOP_DONG",     "DisplayName": "Số hợp đồng",       "Group": "Thông tin hợp đồng", "DataType": "Text",  "Required": true },
+  { "FieldName": "NGAY_KY",         "DisplayName": "Ngày ký",           "Group": "Thông tin hợp đồng", "DataType": "Date" },
+  { "FieldName": "TONG_TIEN",       "DisplayName": "Tổng tiền",         "Group": "Thông tin hợp đồng", "DataType": "Money" },
+
+  { "FieldName": "HH_STT",          "DisplayName": "STT",               "Group": "Bảng hàng hóa",      "DataType": "Number", "Source": "HangHoa" },
+  { "FieldName": "HH_MA",           "DisplayName": "Mã hàng",           "Group": "Bảng hàng hóa",      "DataType": "Text",   "Source": "HangHoa" },
+  { "FieldName": "HH_TEN",          "DisplayName": "Tên hàng",          "Group": "Bảng hàng hóa",      "DataType": "Text",   "Source": "HangHoa" },
+  { "FieldName": "HH_DVT",          "DisplayName": "ĐVT",               "Group": "Bảng hàng hóa",      "DataType": "Text",   "Source": "HangHoa" },
+  { "FieldName": "HH_SL",           "DisplayName": "Số lượng",          "Group": "Bảng hàng hóa",      "DataType": "Number", "Source": "HangHoa" },
+  { "FieldName": "HH_DG",           "DisplayName": "Đơn giá",           "Group": "Bảng hàng hóa",      "DataType": "Money",  "Source": "HangHoa" },
+  { "FieldName": "HH_TT",           "DisplayName": "Thành tiền",        "Group": "Bảng hàng hóa",      "DataType": "Money",  "Source": "HangHoa" }
+]

@@ -1,0 +1,191 @@
+<UserControl x:Class="VToolProMerge.Views.DataSourceView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Background="{StaticResource BgAppBrush}">
+
+    <Grid Margin="24,20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- Title + Toolbar -->
+        <Grid>
+            <TextBlock Text="Nguồn dữ liệu" Style="{StaticResource H1}"/>
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button Style="{StaticResource BtnGhost}" Margin="0,0,8,0"
+                        Command="{Binding AddJsonCommand}">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="📄" Margin="0,0,6,0"/>
+                        <TextBlock Text="Tải JSON..."/>
+                    </StackPanel>
+                </Button>
+                <Button Style="{StaticResource BtnGhost}" Margin="0,0,8,0"
+                        Command="{Binding AddExcelCommand}">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="📊" Margin="0,0,6,0"/>
+                        <TextBlock Text="Tải Excel..."/>
+                    </StackPanel>
+                </Button>
+                <Button Style="{StaticResource BtnGhost}" Margin="0,0,8,0"
+                        Command="{Binding AddSqliteCommand}">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="🗄" Margin="0,0,6,0"/>
+                        <TextBlock Text="Tải SQLite..."/>
+                    </StackPanel>
+                </Button>
+                <Button Style="{StaticResource BtnPrimary}"
+                        Command="{Binding BuildContextCommand}">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="✓" Margin="0,0,6,0" Foreground="White"/>
+                        <TextBlock Text="Build MergeContext" Foreground="White"/>
+                    </StackPanel>
+                </Button>
+            </StackPanel>
+        </Grid>
+
+        <TextBlock Grid.Row="1" Style="{StaticResource BodySecondary}" Margin="0,8,0,16"
+                   Text="Tải nhiều nguồn cùng lúc — engine sẽ gộp scalars và tables (nguồn sau ghi đè nguồn trước). Mỗi nguồn có format quy ước riêng (xem README)."/>
+
+        <Grid Grid.Row="2">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="320"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- LEFT: Source list -->
+            <Border Style="{StaticResource Card}" Margin="0,0,8,0" Padding="0">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    <Border Padding="16,12" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,0,1">
+                        <Grid>
+                            <TextBlock Text="Đã tải" Style="{StaticResource H3}"/>
+                            <TextBlock HorizontalAlignment="Right"
+                                       Text="{Binding Entries.Count, StringFormat={}{0} nguồn}"
+                                       Foreground="{StaticResource TextMutedBrush}"/>
+                        </Grid>
+                    </Border>
+                    <ListBox Grid.Row="1" ItemsSource="{Binding Entries}"
+                             SelectedItem="{Binding Selected}"
+                             Background="Transparent" BorderThickness="0"
+                             ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                        <ListBox.ItemContainerStyle>
+                            <Style TargetType="ListBoxItem">
+                                <Setter Property="Padding" Value="0"/>
+                                <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                                <Setter Property="Template">
+                                    <Setter.Value>
+                                        <ControlTemplate TargetType="ListBoxItem">
+                                            <Border x:Name="bd" Background="Transparent" Padding="12,10"
+                                                    Margin="8,2" CornerRadius="8">
+                                                <ContentPresenter/>
+                                            </Border>
+                                            <ControlTemplate.Triggers>
+                                                <Trigger Property="IsMouseOver" Value="True">
+                                                    <Setter TargetName="bd" Property="Background"
+                                                            Value="{StaticResource BgChipBrush}"/>
+                                                </Trigger>
+                                                <Trigger Property="IsSelected" Value="True">
+                                                    <Setter TargetName="bd" Property="Background"
+                                                            Value="{StaticResource BrandPrimarySoftBrush}"/>
+                                                </Trigger>
+                                            </ControlTemplate.Triggers>
+                                        </ControlTemplate>
+                                    </Setter.Value>
+                                </Setter>
+                            </Style>
+                        </ListBox.ItemContainerStyle>
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel>
+                                    <Grid>
+                                        <StackPanel Orientation="Horizontal">
+                                            <Border Width="22" Height="22" CornerRadius="4"
+                                                    Background="{StaticResource BrandPrimarySoftBrush}"
+                                                    Margin="0,0,8,0">
+                                                <TextBlock Text="📄" FontSize="11"
+                                                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                            </Border>
+                                            <TextBlock Text="{Binding Name}" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                        <Border HorizontalAlignment="Right" Padding="6,2" CornerRadius="4"
+                                                Background="{StaticResource BgChipBrush}" VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding Kind}" FontSize="11"
+                                                       Foreground="{StaticResource TextSecondaryBrush}"/>
+                                        </Border>
+                                    </Grid>
+                                    <TextBlock Text="{Binding Path}" Style="{StaticResource Caption}"
+                                               TextTrimming="CharacterEllipsis" Margin="30,2,0,0"/>
+                                    <StackPanel Orientation="Horizontal" Margin="30,4,0,0">
+                                        <TextBlock Style="{StaticResource Caption}">
+                                            <Run Text="{Binding ScalarCount}"/><Run Text=" field"/>
+                                        </TextBlock>
+                                        <TextBlock Margin="10,0,0,0" Style="{StaticResource Caption}">
+                                            <Run Text="{Binding TableCount}"/><Run Text=" bảng"/>
+                                        </TextBlock>
+                                    </StackPanel>
+                                </StackPanel>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                    <Border Grid.Row="2" Padding="12,10" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,1,0,0">
+                        <Button Style="{StaticResource BtnGhost}" Content="🗑 Gỡ nguồn đã chọn"
+                                Command="{Binding RemoveCommand}"
+                                HorizontalAlignment="Stretch"/>
+                    </Border>
+                </Grid>
+            </Border>
+
+            <!-- RIGHT: Detail (scalars + tables) -->
+            <Border Grid.Column="1" Style="{StaticResource Card}" Margin="8,0,0,0" Padding="0">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <Border Padding="16,12" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,0,1">
+                        <TextBlock Text="Field scalar (Key → Value)" Style="{StaticResource H3}"/>
+                    </Border>
+                    <DataGrid Grid.Row="1" ItemsSource="{Binding Scalars}">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Token" Binding="{Binding Token}" FontFamily="Consolas" Width="280"/>
+                            <DataGridTextColumn Header="Giá trị" Binding="{Binding Value}" Width="*"/>
+                        </DataGrid.Columns>
+                    </DataGrid>
+
+                    <Border Grid.Row="2" Padding="16,12" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,1,0,1">
+                        <Grid>
+                            <TextBlock Style="{StaticResource H3}">
+                                <Run Text="Bảng dữ liệu: "/>
+                                <Run Text="{Binding SelectedTableName}" Foreground="{StaticResource BrandPrimaryBrush}"/>
+                            </TextBlock>
+                            <ItemsControl ItemsSource="{Binding Tables}" HorizontalAlignment="Right">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate><StackPanel Orientation="Horizontal"/></ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Button Content="{Binding}" Style="{StaticResource BtnChip}" Margin="4,0,0,0"
+                                                Command="{Binding DataContext.SelectTableCommand,
+                                                          RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                CommandParameter="{Binding}"/>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </Grid>
+                    </Border>
+                    <DataGrid Grid.Row="3" ItemsSource="{Binding SelectedTableView}"
+                              AutoGenerateColumns="True"/>
+                </Grid>
+            </Border>
+        </Grid>
+    </Grid>
+</UserControl>
